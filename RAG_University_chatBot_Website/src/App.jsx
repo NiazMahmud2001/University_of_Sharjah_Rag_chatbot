@@ -73,7 +73,9 @@ const ChatInterface = () => {
       setMessages(prev => [...prev, { text: inputText, isBot: false }]);
       
       const link = "http://192.168.70.33:8709/askQuestion/";
-      //const link = "http://172.29.11.5:8709/askQuestion/";
+      //const link = "http://172.29.36.134:8709/askQuestion/";
+      //const link = "http://172.30.240.1:8709/askQuestion/"
+      // use npm run dev -- --host
 
       const response = await axios.post(link, { 
         query: inputText,
