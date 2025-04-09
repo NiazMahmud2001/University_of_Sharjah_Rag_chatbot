@@ -1,0 +1,88 @@
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+  
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    line-height: 1.6;
+    background-color: #212121;
+    color: #e0e0e0;
+    overflow:hidden; 
+}
+
+.app-container{
+    position: relative;
+    display: flex;
+    height: 100vh;
+    width: 100vw;
+    padding: 5px;
+    overflow: hidden;
+}
+
+.app-container>.sideInfoContainer{
+    position: relative;
+    min-width: 15%;
+    max-width: 320px;
+    height: 100%;
+    padding-left : 15px;
+    padding-top: 15px;
+    background-color: #171717;
+}
+
+.app-container>.sideInfoContainer>.topSVGShow{
+    position: relative;
+    width: 100%;
+    height: 5%;
+    overflow: hidden;
+    color: #ECECEC;
+
+    display: flex;
+    justify-content: space-between;
+    align-items: space-between;
+    flex-direction: row;
+    padding-right: 20px;
+}
+.app-container>.sideInfoContainer>.topSVGShow>.topSVGShowbtn1{
+
+}
+
+.app-container>.sideInfoContainer>.bottomTextShow{
+    position: relative;
+    width: 100%;
+    height: 95%;
+    overflow-x:hidden;
+    overflow-y: auto;
+}
+  
+.bottomTextShow::-webkit-scrollbar {
+    width: 10px;
+}
+
+.bottomTextShow::-webkit-scrollbar-track {
+  background: transparent;
+  border-radius: 10px;
+}
+
+.bottomTextShow::-webkit-scrollbar-thumb {
+  background: #929292;
+  border-radius: 10px;
+}
+
+.app-container>.rightSideChatContainer{
+    position: relative;
+    float: right;
+    width: 85%;
+    max-width: calc(100% - 320px);
+    height: 100%;
+}
+
+.app-container>.rightSideChatContainer>.rightSideTopUserInfo{
+    position: relative;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-left: 15px;
+    padding-right: 15px;
+}
