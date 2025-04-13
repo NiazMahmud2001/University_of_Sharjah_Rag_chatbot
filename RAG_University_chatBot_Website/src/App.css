@@ -1,210 +1,341 @@
-* {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
+@import "https://unpkg.com/open-props/easings.min.css";
+
+:root{
+    --size: 2rem;
+    --icon-fill-sun: #6b4d11;
+    --icon-fill-hover-sun: #4b3b04;
+    
+    --allBackgroundColor: #212121;
+    --allBackgroundColorOpposite: #ffffff;
+    --allTextColor: #e0e0e0;
+    --sidebarContColor: #171717;
+    --textInputBGColor: #303030;
+}
+*{
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
 }
 
 body {
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  line-height: 1.6;
-  background-color: #212121;
-  color: #e0e0e0;
-  overflow-x: hidden;
-  overflow-y: auto;
-  
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    line-height: 1.6;
+    background-color: var(--allBackgroundColor);
+    color: var(--allTextColor);
+    overflow:hidden;
 }
 
-body::-webkit-scrollbar {
-  display: none; 
+.app-container{
+    position: relative;
+    display: flex;
+    height: 100vh;
+    width: 100vw;
+    padding: 5px;
+    overflow: hidden;
 }
 
-.app-container {
-  display: flex;
-  min-height: 100vh;
-  width: 100vw;
-  background-color: #212121;
+.app-container>.sideInfoContainer{
+    position: relative;
+    width: 0px;
+    height: 100%;
+    padding-left : 0px;
+    padding-top: 0px;
+    background-color:  var(--sidebarContColor);
 }
 
 
-/* Main content */
-.main-content {
-  flex: 1;
-  padding: 30px;
-  padding-left: 10%;
-  padding-right: 10%;
-  background-color: #212121;
-  display: flex;
-  flex-direction: column;
+.app-container>.sideInfoContainer>.topSVGShow{
+    position: relative;
+    width: 100%;
+    height: 5%;
+    overflow: hidden;
+
+    display: flex;
+    justify-content: space-between;
+    align-items: space-between;
+    flex-direction: row;
+    padding-right: 0px;
+    padding-top: 12px;
+}
+.app-container>.sideInfoContainer>.topSVGShow>.topSVGShowbtn1{
+
+}
+.uosSvg>.uosSvgImg{
+    width: 110px;
+    height: 80px;
+}
+.uosSvgInner{
+    width: 100%;
+    height: 100%;
 }
 
-/* Upload section */
-.upload-section {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  position: relative;
-  width: 70px;
-  height: 70%;
-  border: 2px dashed #444;
+.app-container>.sideInfoContainer>.bottomTextShow{
+    position: relative;
+    width: 100%;
+    height: 95%;
+    overflow-x:hidden;
+    overflow-y: auto;
+
+    display: flex;
+    align-items: center;
+}
+
+.bottomTextShow::-webkit-scrollbar {
+    width: 10px;
+}
+
+.bottomTextShow::-webkit-scrollbar-track {
+  background: transparent;
   border-radius: 10px;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  background-color: #313131;
 }
 
-.upload-section:hover {
-  border-color: #4dabf7;
-  background-color: #3e3e3e;
+.bottomTextShow::-webkit-scrollbar-thumb {
+  background: #929292;
+  border-radius: 10px;
+}
+.bottomTextShow>.bottomTextShowText{
+
 }
 
-.upload-section p {
-  color: #ccc;
-  margin: 0;
-  font-size: 0.95em;
+/*  ====== right chatting side part ====== */
+
+
+/* width: 85%; */
+.app-container>.rightSideChatContainer{
+    position: relative;
+    float: right;
+    width: 100%;
+    height: 100%;
+}
+
+.app-container>.rightSideChatContainer>.rightSideTopUserInfo{
+    position: relative;
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-left: 15px;
+    padding-right: 15px;
+}
+
+.app-container>.rightSideChatContainer>.rightSideTopUserInfo>.rightSideTopUserInfoTextRight{
+    position: relative;
+    width: 200px;
+    display: flex;
+    justify-content: space-between;
+}
+.rightSideSVGShow>div{
+    position: relative;
+    width: 70px;
+    display: flex;
+    justify-content: space-between;
+}
+
+.rightSideTopUserInfoText{
+    display: relative;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    width: 120px;
+}
+.userloginBtn{
+    position: relative;
+    border-width: 0.7px ;
+    border-style: solid;
+    border-color: var(--allTextColor);
+    border-radius: 10px;
+    padding-left: 15px;
+    padding-right: 15px;
 }
 
 
-/* Chat container */
-.chat-container {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  background-color: #212121;
-  border-radius: 12px;
+
+/* ===== Dark theme and light theme design ===== */
+
+.theme-toggle {
+    background-color:  var(--allBackgroundColor);
+    border-width: 0px;
+    inline-size: var(--size);
+    block-size: var(--size);
+    border-radius: 50%;
+
+    & > svg {
+      inline-size: 100%;
+      block-size: 100%;
+      stroke-linecap: round;
+    }
+
+}
+.sun-and-moon {
+    width: 30px;
+    height: 30px;
+}
+.sun-and-moon > :is(.moon, .sun, .sun-beams) {
+    transform-origin: center;
 }
 
-.chat-messages {
-  flex: 1;
-  padding: 20px;
-  overflow-y: auto;
-  background-color: #212121;
+.sun-and-moon > :is(.moon) {
+  fill: var(--icon-fill-sun);
+}
+.sun-and-moon > :is(.moon){
+  fill: var(--icon-fill-sun);
+}
+.sun-and-moon > :is(.sun) {
+  fill: var(--icon-fill-sun);
 }
 
-/* Messages */
+.theme-toggle:is(:hover, :focus-visible) > .sun-and-moon > :is(.moon) {
+  fill: var(--icon-fill-hover-moon);
+}
+.theme-toggle:is(:hover, :focus-visible) > .sun-and-moon > :is(.sun) {
+  fill: var(--icon-fill-hover-sun);
+}
+
+.sun-and-moon > .sun-beams {
+  stroke: var(--icon-fill-sun);
+  stroke-width: 3px;
+}
+
+.theme-toggle:is(:hover, :focus-visible) .sun-and-moon > .sun-beams {
+  stroke: var(--icon-fill-hover-sun);
+}
+
+[data-theme="dark"] .sun-and-moon > .sun {
+  transform: scale(1.75);
+}
+
+[data-theme="dark"] .sun-and-moon > .sun-beams {
+  opacity: 0;
+}
+
+[data-theme="dark"] .sun-and-moon > .moon > circle {
+  transform: translateX(-7px);
+}
+
+@supports (cx: 1) {
+  [data-theme="dark"] .sun-and-moon > .moon > circle {
+    cx: 17;
+    transform: translateX(0);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .sun-and-moon > .sun {
+    transition: transform .5s var(--ease-elastic-3);
+  }
+
+  .sun-and-moon > .sun-beams {
+    transition: transform .5s var(--ease-elastic-4), opacity .5s var(--ease-3);
+  }
+
+  .sun-and-moon .moon > circle {
+    transition: transform .25s var(--ease-out-5);
+  }
+
+  @supports (cx: 1) {
+    .sun-and-moon .moon > circle {
+      transition: cx .25s var(--ease-out-5);
+    }
+  }
+
+  [data-theme="dark"] .sun-and-moon > .sun {
+    transition-timing-function: var(--ease-3);
+    transition-duration: .25s;
+    transform: scale(1.75);
+  }
+
+  [data-theme="dark"] .sun-and-moon > .sun-beams {
+    transition-duration: .15s;
+    transform: rotateZ(-25deg);
+  }
+
+  [data-theme="dark"] .sun-and-moon > .moon > circle {
+    transition-duration: .5s;
+    transition-delay: .25s;
+  }
+}
+
+
+/* = end Dark theme and light = */
+
+
+
+/* ======== main chat interface input output part ========= */
+.rightSideBottomChattingSpace{
+    position: relative;
+    width: 100%;
+    height: calc(100% - 80px);
+    padding: 20px; 
+    /* 90px=> is the height of ".uosSvg" */
+    display: flex;
+    align-items: center;
+    flex-direction: column;
+}
+.rightSideBottomChattingSpace>.rightBottomTopchatOutter{
+    position: relative;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    flex-direction: column;
+    overflow-y: scroll;
+    overflow-x: hidden;
+}
+
+.rightBottomTopchatOutter>.rightBottomTopchat{
+    position: relative;
+    height: 100%;
+    width: 1050px;    
+}
+
+/* == user Messages and bot message == */
 .message {
+  position: relative;
   margin-bottom: 15px;
   padding: 12px 18px;
   border-radius: 15px;
   max-width: 75%;
-  animation: fadeIn 0.3s ease-out;
   word-break: break-word;
   line-height: 1.5;
 }
-
-.user-message {
-  background-color: #4dabf7;
-  color: white;
+.user_message {
+  background-color: #a8a8a8b0;
+  color: var(--allTextColor);
   margin-left: auto;
   border-radius: 15px 15px 0 15px;
 }
 
-.bot-message {
-  background-color: #3e3e3e;
-  color: #eee;
+.bot_message {
+  position: relative;
+  display: flex;
+  background-color: transparent;
+  color:var(--allTextColor);
   margin-right: auto;
   border: 1px solid #444;
   border-radius: 15px 15px 15px 0;
 }
-
-/* Input area */
-.input-container {
-  position: fixed;
-  bottom: 0;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  width: 80%;
-  min-height: 100px; 
-  background-color: #212121;
-  padding: 10px 0;
-  z-index: 10000;
+.bot_message>img{
+  margin-right: 10px;
 }
+/* === end user Messages and bot message === */
 
-.wrapperConteiner{
-  position: relative;
-  bottom: 0;
-  overflow: hidden;
-  width: 100%;
-  min-height: 100px;
-}
-
-
-.topContainer{
-  position: relative;
-  width: 100%;
-  height: 60%;
-  padding-bottom: 20px;
-  display: flex;
-  justify-content: space-around;
-  align-items: center;
-}
-.input-field {
-  flex: 1;
-  padding: 12px 18px;
-  border: 1px solid #444;
-  border-radius: 15px;
-  font-size: 1em;
-  transition: border-color 0.3s ease;
-  background-color: #313131;
-  color: #e0e0e0;
-}
-
-.input-field:focus {
-  outline: none;
-  border-color: #4dabf7;
-  box-shadow: 0 0 0 3px rgba(77, 171, 247, 0.3);
-}
-
-.send-button {
-  padding: 12px 25px;
-  background-color: #4dabf7;
-  color: white;
-  border: none;
-  border-radius: 15px;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  font-weight: 500;
-  margin-left: 2%;
-}
-
-.send-button:hover {
-  background-color: #339af0;
-}
-
-.send-button:disabled {
-  background-color: #a5d8ff;
-  cursor: not-allowed;
-}
-
-/* Typing indicator */
-.typing-indicator {
+/* === Typing dot indicator === */
+.rightBottomTopchat>.typing_indicator {
   display: flex;
   padding: 15px 20px;
   gap: 6px;
   align-items: center;
 }
 
-.typing-dot {
+.rightBottomTopchat>.typing_indicator>.typing_dot {
   width: 8px;
   height: 8px;
-  background-color: #ccc;
+  background-color: var(--allTextColor);
   border-radius: 50%;
   animation: typing 1.4s infinite ease-in-out;
 }
 
-/* Animations */
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
+/* Typing dot Animations */
 @keyframes typing {
   0%, 100% {
     transform: translateY(0);
@@ -215,63 +346,194 @@ body::-webkit-scrollbar {
     opacity: 1;
   }
 }
+/* === end Typing dot indicator === */
 
-/* Responsive design */
-@media (max-width: 768px) {
-  .app-container {
+.rightBottomTopchatOutter::-webkit-scrollbar {
+    width: 10px;
+}
+
+.rightBottomTopchatOutter::-webkit-scrollbar-track {
+  background: var(--allBackgroundColor);
+  border-radius: 10px;
+}
+
+.rightBottomTopchatOutter::-webkit-scrollbar-thumb {
+  background: #929292;
+  border-radius: 10px;
+}
+
+/* ==== bottom input query and file input part ==== */
+
+.rightSideBottomChattingSpace>.rightBottomBottomInputSpace{
+    position: relative;
+    width: 1050px;
+    height: 10%;
+    /* increase this height when you have multi line input */
+    margin-top: 1%;
+    border-radius: 20px;
+
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
     flex-direction: column;
-  }
-  .main-content {
-    padding: 30px;
-    padding-left: 5%;
-    padding-right: 5%;
-  }
+    background-color: var(--textInputBGColor);
+    box-shadow: 2px 3px 10px 0px rgba(0,0,0,0.3);
+}
 
-  .input-container {
+.rightBottomBottomInputSpace>.textQueryInputBoxSec{
+    position: relative;
+    width: 95%;
+    height: 50%;
+    /* increase this height when you have multi line input */
+    background-color: aqua;
+}
+.rightBottomBottomInputSpace>.pdfFileInputBoxSec{
+    position: relative;
+    width: 95%;
+    height: 40%;
+    /* reduce this height when you have multi line input */
+}
+
+.textQueryInputBoxSec>.textQueryInputBox{
+    width: 100%;
+    height: 100%;
+    padding-left: 30px;
+    border-width: 0px;
+    background-color: var(--textInputBGColor);
+    font-size: 1.2rem;
+}
+input:focus {
+    outline: none;
+    border: none; 
+}
+
+@media (min-width: 1100px) and (max-width: 1400px) {
+    .rightBottomTopchatOutter>.rightBottomTopchat{
+        position: relative;
+        height: 90%;
+        width:  80%;
+    }
+    .rightSideBottomChattingSpace>.rightBottomBottomInputSpace{
+        position: relative;
+        width:  80%;
+        height: 8%;
+        margin-top: 1%;
+    }
+}
+@media screen and (max-width: 1099px) {
+    .rightBottomTopchatOutter>.rightBottomTopchat{
+        position: relative;
+        width:  98%;
+    }
+    .rightSideBottomChattingSpace>.rightBottomBottomInputSpace{
+        position: relative;
+        width:  98%;
+        height: 10%;
+        margin-top: 1%;
+    }
+}
+
+
+/* ===== submit file and submit query button ====== */
+
+.pdfFileInputBoxSec>.inneruploadedSide{
+    width: 100%;
+    height: 90%;
+    position: relative;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+.inneruploadedSide>.queryAndFileSubmitCls{
+    position: relative;
+    height: 100%;
+    padding-left: 15px;
+    padding-right: 15px;
+}
+.inneruploadedSide::before{
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 5%;
     width: 90%;
-  }
-  
-
-  .message {
-    max-width: 85%;
-  }
+    height: 1%;
+    background-color: var(--allTextColor);
+}
+.inneruploadedSide>.queryAndFileSubmitClsBS{
+    position: relative;
+    height: 100%;
 }
 
-/* Existing styles for file display */
-.uploaded-files-display {
-  width: 100%;
-  padding: 5px 0;
 
-}
 
-.file-item {
-  position: relative;
-  display: inline-block;
-  padding: 5px 20px 5px 5px;
-  background-color: #2e2e2e;
-  border: 1px solid #444;
-  border-radius: 4px;
-  color: #ccc;
-  font-size: 0.9em;
-  margin-bottom: 5px;
-  margin-right: 25px;
-}
 
-.remove-file-btn {
-  position: absolute;
-  top: -5px;
-  right: -5px;
-  background: #e0e0e0;
-  color: #121212;
-  border: none;
-  border-radius: 50%;
-  cursor: pointer;
-  width: 16px;
-  height: 16px;
-  font-size: 0.7em;
-  line-height: 16px;
-  text-align: center;
-  padding: 0;
-}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
