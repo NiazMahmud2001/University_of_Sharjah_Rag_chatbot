@@ -92,7 +92,7 @@ body {
     background-color: var(--allBackgroundColorOpposite);
     overflow: hidden;
     animation-name: background-color;
-    animation-delay: 2s;
+    animation-delay: 1.95s;
     animation-duration: 1s;
     animation-fill-mode: forwards;
 }
