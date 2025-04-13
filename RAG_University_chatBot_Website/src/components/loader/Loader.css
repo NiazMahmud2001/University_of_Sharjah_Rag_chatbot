@@ -1,0 +1,169 @@
+@keyframes background-color {
+    from {
+      background-color: var(--allBackgroundColorOpposite)
+    }
+    to {
+      background-color: var(--allBackgroundColor);
+    }
+}
+  
+@keyframes show {
+    from {
+      opacity: 0;
+    }
+  
+    to {
+      opacity: 1;
+    }
+}
+  
+  @keyframes center {
+    from {
+      transform: translateX(0) translateY(0);
+    }
+    to {
+      transform: translate(-50px) translateY(50px);
+    }
+  }
+  @keyframes centerPhoto {
+    from {
+      transform: translateX(0) translateY(0);
+    }
+    to {
+      transform: translate(0px) translateY(0px);
+    }
+  }
+  
+  @keyframes scale {
+    from {
+      scale: 1;
+    }
+    to {
+      scale: 70;
+    }
+  }
+  
+  @keyframes fill {
+    from {
+      width: 0%;
+    }
+  
+    to {
+      width: 100%;
+    }
+  }
+  
+  @keyframes flip {
+    from {
+      rotate: 0deg;
+      translate: 0 0;
+    }
+  
+    to {
+      rotate: 90deg;
+      translate: 32% -200%;
+    }
+  }
+  
+  @keyframes hide {
+    from {
+      opacity: 1;
+    }
+  
+    to {
+      opacity: 0;
+    }
+  }
+  
+  @keyframes remove {
+    to {
+      display: none;
+    }
+  }
+
+  
+body {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+    position: relative;
+    background-color: var(--allBackgroundColorOpposite);
+    overflow: hidden;
+    animation-name: background-color;
+    animation-delay: 2s;
+    animation-duration: 1s;
+    animation-fill-mode: forwards;
+}
+  
+.loading-wrapper {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    translate: -50% -50%;
+    animation-name: center, scale, hide, remove;
+    animation-delay: 2s;
+    animation-duration: 1s, 2s, 2s;
+    animation-fill-mode: forwards;
+    z-index: 10;
+}
+  
+.loading-container {
+    position: relative;
+    display: flex;
+    width: 300px;
+}
+  
+.loading-bar {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 0%;
+    max-width: 75%;
+    height: 75px;
+    background-color: var(--allBackgroundColor);
+    animation-name: fill, flip;
+    animation-delay: 0s, 1s;
+    animation-duration: 1s, 1s;
+    animation-timing-function: linear, ease-in-out;
+    animation-fill-mode: forwards;
+    will-change: width rotate;
+}
+  
+.short-bar {
+    left: 75%;
+    width: 0%;
+    max-width: 25%;
+    animation-name: fill;
+    animation-delay: 0.75s;
+    animation-duration: 1s;
+    animation-timing-function: linear;
+    animation-fill-mode: forwards;
+}
+.photosPart{
+    position: absolute;
+    top: 100px;
+    left: 0;
+    width: 100vw;
+    height: 120px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+
+
+    animation-name: center, scale, hide, remove;
+    animation-delay: 2s;
+    animation-duration: 1s, 2s, 0.5s;
+    animation-fill-mode: forwards;
+}
+.photosPartInner{
+    width: 50px;
+    height:100px;
+}
+.uosSvgImg{
+    width: 140px;
+    height: 100px;
+    margin-right: 80px;
+}
+/* now make it responsive */
