@@ -39,18 +39,25 @@ const App = () => {
 
 
     useEffect(() => {
+      
       const handleResize = () => {
-        setIsSmallScreen(window.innerWidth < 830);
-        if (window.innerWidth < 830){
-          document.querySelector('.rightSideTopUserInfoTextRight').style.width = "auto";
-        }else{
-          document.querySelector('.rightSideTopUserInfoTextRight').style.width = "200px";
-        }    
+          setIsSmallScreen(window.innerWidth < 830);
+          if (window.innerWidth < 830){
+            document.querySelector('.rightSideTopUserInfoTextRight').style.width = "auto";
+            document.querySelector('.rightSideTopUserInfo').style.justifyContent = "space-between";
+          }else{
+            document.querySelector('.rightSideTopUserInfoTextRight').style.width = "200px";
+          } 
+          if (window.innerWidth<window.innerHeight){
+            document.querySelector(".app-container").style.height = "98vh"
+          }
       };
 
       window.addEventListener("resize", handleResize);
+
       if (window.innerWidth < 830){
         document.querySelector('.rightSideTopUserInfoTextRight').style.width = "auto";
+        document.querySelector('.rightSideTopUserInfo').style.justifyContent = "space-between";
       }else{
         document.querySelector('.rightSideTopUserInfoTextRight').style.width = "200px";
       }
@@ -67,6 +74,11 @@ const App = () => {
       if (toggleButton) {
         toggleButton.addEventListener('click', onClick);
       }
+
+      if (window.innerWidth<window.innerHeight){
+        document.querySelector(".app-container").style.height = "98vh"
+      }
+
       return () => {
         if (toggleButton) {
           toggleButton.removeEventListener('click', onClick);
@@ -83,15 +95,11 @@ const App = () => {
         document.querySelector(".sideInfoContainer").style.paddingLeft = "15px"
         document.querySelector(".sideInfoContainer").style.paddingTop = "15px"
         document.querySelector(".topSVGShow").style.paddingRight = "20px"
-        document.querySelector(".rightSideChatContainer").style.width = "85%"
-        document.querySelector(".rightSideTopUserInfoTextRight").style.width = "auto"
       }else{
         document.querySelector(".sideInfoContainer").style.width = "0px"
         document.querySelector(".sideInfoContainer").style.paddingLeft = "0px"
         document.querySelector(".sideInfoContainer").style.paddingTop = "0px"
         document.querySelector(".topSVGShow").style.paddingRight = "0px"
-        document.querySelector(".rightSideChatContainer").style.width = "100%"
-        document.querySelector(".rightSideTopUserInfoTextRight").style.width = "200px"
       }
       setNumClicked(numClicked + 1)
       console.log(numClicked)
@@ -214,9 +222,10 @@ const App = () => {
         setIsLoading(true);
         setMessages(prev => [...prev, { text: inputText, isBot: false }]);
 
-        const link = "http://192.168.70.33:8709/askQuestion/";
+        //const link = "http://192.168.70.33:8709/askQuestion/";
         //const link = "http://172.29.36.134:8709/askQuestion/";
         //const link = "http://172.30.240.1:8709/askQuestion/"
+        const link = "http://172.29.11.5:8709/askQuestion/"
         // use npm run dev -- --host
 
         const response = await axios.post(link, { 
@@ -307,47 +316,48 @@ const App = () => {
               }
               )()}
             </div>
+            <div className="menueBarRightPart">
+                  <div className="uosSvg">
+                    {(()=>{
+                      if (themeState === 'dark'){
+                        return (
+                          <img src={uosSvg} className='uosSvgImg' />
+                        );
+                      }else{
+                        return (
+                          <img src={uosSvgForWhiteTheme} className='uosSvgImg' />
+                        );
+                      }
+                    })()}
+                  </div>
 
-            <div className="uosSvg">
-              {(()=>{
-                if (themeState === 'dark'){
-                  return (
-                    <img src={uosSvg} className='uosSvgImg' />
-                  );
-                }else{
-                  return (
-                    <img src={uosSvgForWhiteTheme} className='uosSvgImg' />
-                  );
-                }
-              })()}
-            </div>
+                  <div className="rightSideTopUserInfoText">
+                    <div className="userloginBtn">
+                      Login
+                    </div>
+                    <div className="themeToggleBtn">
+                        <button className="theme-toggle" id="theme-toggle" title="Toggles light & dark" aria-label="auto" aria-live="polite">
+                            <svg className="sun-and-moon" aria-hidden="true" width="24" height="24" viewBox="0 0 24 24">
+                              <mask className="moon" id="moon-mask">
+                                <rect x="0" y="0" width="100%" height="100%" fill="white" />
+                                <circle cx="24" cy="10" r="6" fill="black" />
+                              </mask>
+                              <circle className="sun" cx="12" cy="12" r="6" mask="url(#moon-mask)" fill="currentColor" />
+                              <g className="sun-beams" stroke="currentColor">
+                                <line x1="12" y1="1" x2="12" y2="3" />
+                                <line x1="12" y1="21" x2="12" y2="23" />
+                                <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" />
+                                <line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
+                                <line x1="1" y1="12" x2="3" y2="12" />
+                                <line x1="21" y1="12" x2="23" y2="12" />
+                                <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" />
+                                <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
+                              </g>
+                            </svg>
+                        </button>
+                    </div>
 
-            <div className="rightSideTopUserInfoText">
-              <div className="userloginBtn">
-                Login
-              </div>
-              <div className="themeToggleBtn">
-                  <button className="theme-toggle" id="theme-toggle" title="Toggles light & dark" aria-label="auto" aria-live="polite">
-                      <svg className="sun-and-moon" aria-hidden="true" width="24" height="24" viewBox="0 0 24 24">
-                        <mask className="moon" id="moon-mask">
-                          <rect x="0" y="0" width="100%" height="100%" fill="white" />
-                          <circle cx="24" cy="10" r="6" fill="black" />
-                        </mask>
-                        <circle className="sun" cx="12" cy="12" r="6" mask="url(#moon-mask)" fill="currentColor" />
-                        <g className="sun-beams" stroke="currentColor">
-                          <line x1="12" y1="1" x2="12" y2="3" />
-                          <line x1="12" y1="21" x2="12" y2="23" />
-                          <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" />
-                          <line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
-                          <line x1="1" y1="12" x2="3" y2="12" />
-                          <line x1="21" y1="12" x2="23" y2="12" />
-                          <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" />
-                          <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
-                        </g>
-                      </svg>
-                  </button>
-              </div>
-
+                  </div>
             </div>
           </div>
 

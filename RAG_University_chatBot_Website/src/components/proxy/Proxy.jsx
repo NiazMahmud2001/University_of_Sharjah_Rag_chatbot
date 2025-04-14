@@ -5,7 +5,6 @@ import App from "../../App.jsx";
 import Loader from "../loader/Loader.jsx";
 
 const Proxy = () => {
-    const navigate = useNavigate();
     const [isLoading, setIsLoading] = useState(false);
     const [checker, setChecker] = useState(false);
 
@@ -21,6 +20,7 @@ const Proxy = () => {
         };
     }, []);
     
+    return <App />; 
     if (isLoading && checker) {
         return <App />; 
     } else {

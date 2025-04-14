@@ -23,12 +23,14 @@ body {
     background-color: var(--allBackgroundColor);
     color: var(--allTextColor);
     overflow:hidden;
-}
+  }
 
 .app-container{
-    position: relative;
+    position: absolute;
+    top: 0;
+    left: 0;
     display: flex;
-    height: 100vh;
+    height:100vh;
     width: 100vw;
     padding: 5px;
     overflow: hidden;
@@ -57,12 +59,18 @@ body {
     padding-right: 0px;
     padding-top: 12px;
 }
-.app-container>.sideInfoContainer>.topSVGShow>.topSVGShowbtn1{
 
+.menueBarRightPart{
+  position: relative;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  height: 100%;
+  width: 50vw;
 }
 .uosSvg>.uosSvgImg{
     width: 110px;
-    height: 80px;
+    height: 100%;
 }
 .uosSvgInner{
     width: 100%;
@@ -116,11 +124,12 @@ body {
     align-items: center;
     padding-left: 15px;
     padding-right: 15px;
+    height: 75px;
 }
 
 .app-container>.rightSideChatContainer>.rightSideTopUserInfo>.rightSideTopUserInfoTextRight{
     position: relative;
-    width: 200px;
+    width: 50vw;
     display: flex;
     justify-content: space-between;
 }
@@ -146,6 +155,16 @@ body {
     border-radius: 10px;
     padding-left: 15px;
     padding-right: 15px;
+}
+
+
+@media screen and (max-width:830px){
+  .app-container>.rightSideChatContainer>.rightSideTopUserInfo>.rightSideTopUserInfoTextRight{
+    width: 45vw;
+  }
+  .menueBarRightPart{
+    width: 55vw;
+  }
 }
 
 
@@ -464,6 +483,63 @@ input:focus {
     height: 100%;
 }
 
+
+
+
+/* =========================================================== */
+@media (min-width:480px) and (max-width:600px) {
+  :root{
+    --size: 1.5rem;
+  }
+  .app-container>.rightSideChatContainer>.rightSideTopUserInfo{
+      height: 70px;
+  }
+  .uosSvg>.uosSvgImg{
+    width: 95px;
+  }
+  .rightSideTopUserInfoText{
+    width: 100px;
+  }
+  .userloginBtn{
+    font-size: 2.5vw;
+    border-width: 0.7px ;
+  }
+
+}
+@media screen and (max-width:479px) {
+  :root{
+    --size: 1.2rem;
+  }
+  *{
+    font-size: 2.5vw;
+  }
+  .app-container>.rightSideChatContainer>.rightSideTopUserInfo{
+      height: 60px;
+  }
+  .uosSvg>.uosSvgImg{
+    width: 80px;
+  }
+  .rightSideTopUserInfoText{
+    position: absolute;
+    right: 0;
+    width: 80px;
+  }
+  .userloginBtn{
+    font-size: 2.5vw;
+  }
+  .topSVGShow>img{
+    width: 25px;
+    height: 25px;
+  }
+  .rightSideSVGShow>div>img{
+    width: 25px;
+    height: 25px;
+  }
+  .rightSideSVGShow>img{
+    width: 25px;
+    height: 25px;
+  }
+}
 
 
 
