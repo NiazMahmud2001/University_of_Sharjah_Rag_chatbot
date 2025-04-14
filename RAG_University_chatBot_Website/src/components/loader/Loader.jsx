@@ -52,22 +52,19 @@ const Loader = () => {
                     if (theme.value === 'dark'){
                         
                         return (
-                            <img src={uosSvgForWhiteTheme} className='uosSvgImg' width={100} height={100}/>
+                            <img src={uosSvg} className='uosSvgImg'  width={100} height={100} />
                         );
                     }else{
                         return (
-                            <img src={uosSvg} className='uosSvgImg'  width={100} height={100} />
-                        );
+                            <img src={uosSvgForWhiteTheme} className='uosSvgImg' width={100} height={100}/>                        );
                     }
                 })()}
                 <img src={ModelLogo_with_text} className='photosPartInner'/>
             </div>
-            <div className="loading-wrapper">
-                <div className="loading-container">
-                    <div className="loading-bar"></div>
-                    <div className="loading-bar short-bar"></div>
-                </div>
-            </div>
+            <section className="container">
+                <div className="square"></div>
+                <div className="infinite-scroll"></div>
+            </section>
         </div>
     );
 
