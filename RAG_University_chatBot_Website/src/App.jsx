@@ -222,12 +222,14 @@ const App = () => {
         setIsLoading(true);
         setMessages(prev => [...prev, { text: inputText, isBot: false }]);
 
-        //const link = "http://192.168.70.33:8709/askQuestion/";
+        //const link = "http://10.255.131.123:8709/askQuestion/";
+        const link = "http://192.168.70.33:8709/askQuestion/";
         //const link = "http://172.29.36.134:8709/askQuestion/";
         //const link = "http://172.30.240.1:8709/askQuestion/"
-        const link = "http://172.29.11.5:8709/askQuestion/"
+        //const link = "http://172.29.11.5:8709/askQuestion/"
+        //const link = "http://172.29.11.5:8709/askQuestion/"
         // use npm run dev -- --host
-
+        console.log(inputText)
         const response = await axios.post(link, { 
           query: inputText,
           isChat: true 

@@ -19,8 +19,7 @@ const Proxy = () => {
             clearTimeout(timer);
         };
     }, []);
-    
-    return <App />; 
+
     if (isLoading && checker) {
         return <App />; 
     } else {

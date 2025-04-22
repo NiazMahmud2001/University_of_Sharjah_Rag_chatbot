@@ -1,0 +1,6 @@
+1. npm create vite@latest
+2. select your project name: 3D_React_web_dev
+3. select app languge: React and JavaScript
+4. cd 3D_React_web_dev
+5. npm i 
+6. npm dev run or npm run dev -- --host => to start your project locally otr
