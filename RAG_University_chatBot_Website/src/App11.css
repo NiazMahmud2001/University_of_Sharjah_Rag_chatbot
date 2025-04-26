@@ -1,0 +1,277 @@
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  line-height: 1.6;
+  background-color: #212121;
+  color: #e0e0e0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  
+}
+
+body::-webkit-scrollbar {
+  display: none; 
+}
+
+.app-container {
+  display: flex;
+  min-height: 100vh;
+  width: 100vw;
+  background-color: #212121;
+}
+
+
+/* Main content */
+.main-content {
+  flex: 1;
+  padding: 30px;
+  padding-left: 10%;
+  padding-right: 10%;
+  background-color: #212121;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Upload section */
+.upload-section {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  position: relative;
+  width: 70px;
+  height: 70%;
+  border: 2px dashed #444;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  background-color: #313131;
+}
+
+.upload-section:hover {
+  border-color: #4dabf7;
+  background-color: #3e3e3e;
+}
+
+.upload-section p {
+  color: #ccc;
+  margin: 0;
+  font-size: 0.95em;
+}
+
+
+/* Chat container */
+.chat-container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background-color: #212121;
+  border-radius: 12px;
+}
+
+.chat-messages {
+  flex: 1;
+  padding: 20px;
+  overflow-y: auto;
+  background-color: #212121;
+}
+
+/* Messages */
+.message {
+  margin-bottom: 15px;
+  padding: 12px 18px;
+  border-radius: 15px;
+  max-width: 75%;
+  animation: fadeIn 0.3s ease-out;
+  word-break: break-word;
+  line-height: 1.5;
+}
+
+.user-message {
+  background-color: #4dabf7;
+  color: white;
+  margin-left: auto;
+  border-radius: 15px 15px 0 15px;
+}
+
+.bot-message {
+  background-color: #3e3e3e;
+  color: #eee;
+  margin-right: auto;
+  border: 1px solid #444;
+  border-radius: 15px 15px 15px 0;
+}
+
+/* Input area */
+.input-container {
+  position: fixed;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  width: 80%;
+  min-height: 100px; 
+  background-color: #212121;
+  padding: 10px 0;
+  z-index: 10000;
+}
+
+.wrapperConteiner{
+  position: relative;
+  bottom: 0;
+  overflow: hidden;
+  width: 100%;
+  min-height: 100px;
+}
+
+
+.topContainer{
+  position: relative;
+  width: 100%;
+  height: 60%;
+  padding-bottom: 20px;
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+}
+.input-field {
+  flex: 1;
+  padding: 12px 18px;
+  border: 1px solid #444;
+  border-radius: 15px;
+  font-size: 1em;
+  transition: border-color 0.3s ease;
+  background-color: #313131;
+  color: #e0e0e0;
+}
+
+.input-field:focus {
+  outline: none;
+  border-color: #4dabf7;
+  box-shadow: 0 0 0 3px rgba(77, 171, 247, 0.3);
+}
+
+.send-button {
+  padding: 12px 25px;
+  background-color: #4dabf7;
+  color: white;
+  border: none;
+  border-radius: 15px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-weight: 500;
+  margin-left: 2%;
+}
+
+.send-button:hover {
+  background-color: #339af0;
+}
+
+.send-button:disabled {
+  background-color: #a5d8ff;
+  cursor: not-allowed;
+}
+
+/* Typing indicator */
+.typing-indicator {
+  display: flex;
+  padding: 15px 20px;
+  gap: 6px;
+  align-items: center;
+}
+
+.typing-dot {
+  width: 8px;
+  height: 8px;
+  background-color: #ccc;
+  border-radius: 50%;
+  animation: typing 1.4s infinite ease-in-out;
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes typing {
+  0%, 100% {
+    transform: translateY(0);
+    opacity: 0.6;
+  }
+  50% {
+    transform: translateY(-4px);
+    opacity: 1;
+  }
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .app-container {
+    flex-direction: column;
+  }
+  .main-content {
+    padding: 30px;
+    padding-left: 5%;
+    padding-right: 5%;
+  }
+
+  .input-container {
+    width: 90%;
+  }
+  
+
+  .message {
+    max-width: 85%;
+  }
+}
+
+/* Existing styles for file display */
+.uploaded-files-display {
+  width: 100%;
+  padding: 5px 0;
+
+}
+
+.file-item {
+  position: relative;
+  display: inline-block;
+  padding: 5px 20px 5px 5px;
+  background-color: #2e2e2e;
+  border: 1px solid #444;
+  border-radius: 4px;
+  color: #ccc;
+  font-size: 0.9em;
+  margin-bottom: 5px;
+  margin-right: 25px;
+}
+
+.remove-file-btn {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  background: #e0e0e0;
+  color: #121212;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  width: 16px;
+  height: 16px;
+  font-size: 0.7em;
+  line-height: 16px;
+  text-align: center;
+  padding: 0;
+}
+
+
