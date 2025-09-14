@@ -63,11 +63,21 @@ body {
 .menueBarRightPart{
   position: relative;
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-start;
   align-items: center;
   height: 100%;
   width: 50vw;
+  gap: 0; /* keep logos tight */
 }
+/* remove any auto margins around logo wrappers */
+.menueBarRightPart .uosSvg, .menueBarRightPart .modelLogoHeader{
+  margin: 0;
+}
+/* tiny controlled gap only */
+.menueBarRightPart .uosSvg + .modelLogoHeader{ margin-left: 4px; }
+/* ensure logo images have no extra margins */
+.uosSvg>.uosSvgImg{ margin: 0; }
+.modelLogoHeader .modelLogoImg{ margin: 0; }
 .uosSvg>.uosSvgImg{
     width: 110px;
     height: 100%;
@@ -127,6 +137,14 @@ body {
     height: 75px;
 }
 
+/* keep uosSvg and model logo flush */
+.menueBarRightPart .uosSvg, .menueBarRightPart .modelLogoHeader{
+  display: inline-flex;
+  align-items: center;
+}
+.menueBarRightPart .uosSvg + .modelLogoHeader{
+  margin-left: 6px; /* small, tight spacing only */
+}
 .app-container>.rightSideChatContainer>.rightSideTopUserInfo>.rightSideTopUserInfoTextRight{
     position: relative;
     width: 50vw;
@@ -146,6 +164,7 @@ body {
     justify-content: space-between;
     align-items: flex-start;
     width: 120px;
+    margin-left: auto; /* push to the far right */
 }
 .userloginBtn{
     position: relative;
@@ -293,7 +312,9 @@ body {
 .rightSideBottomChattingSpace>.rightBottomTopchatOutter{
     position: relative;
     width: 100%;
-    height: 100%;
+    /* let chat area fill remaining space */
+    flex: 1;
+    height: auto;
     display: flex;
     align-items: center;
     flex-direction: column;
@@ -307,41 +328,51 @@ body {
     width: 1050px;    
 }
 
-/* == user Messages and bot message == */
+/* === Chat message bubbles === */
 .message {
   position: relative;
-  margin-bottom: 15px;
-  padding: 12px 18px;
-  border-radius: 15px;
+  margin-bottom: 14px;
+  padding: 12px 16px;
+  border-radius: 16px;
   max-width: 75%;
   word-break: break-word;
-  line-height: 1.5;
+  line-height: 1.55;
 }
 .user_message {
-  background-color: #a8a8a8b0;
+  background: linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.04));
   color: var(--allTextColor);
   margin-left: auto;
-  border-radius: 15px 15px 0 15px;
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 16px 16px 4px 16px;
+}
+[data-theme="light"] .user_message{
+  background: #f2f4f7;
+  border-color: #e6e6e6;
 }
 
 .bot_message {
   position: relative;
   display: flex;
-  background-color: transparent;
-  color:var(--allTextColor);
+  align-items: flex-start;
+  gap: 10px;
+  background: transparent;
+  color: var(--allTextColor);
   margin-right: auto;
   border: 1px solid #444;
-  border-radius: 15px 15px 15px 0;
+  border-radius: 16px 16px 16px 4px;
+}
+[data-theme="light"] .bot_message{
+  border-color: #e6e6e6;
 }
 .bot_message>img{
-  margin-right: 10px;
+  margin-top: 2px;
 }
-/* === end user Messages and bot message === */
+/* === end message bubbles === */
 
-/* === Typing dot indicator === */
+/* === Typing dots indicator === */
 .rightBottomTopchat>.typing_indicator {
   display: flex;
-  padding: 15px 20px;
+  padding: 12px 16px;
   gap: 6px;
   align-items: center;
 }
@@ -350,53 +381,171 @@ body {
   width: 8px;
   height: 8px;
   background-color: var(--allTextColor);
+  opacity: 0.85;
   border-radius: 50%;
   animation: typing 1.4s infinite ease-in-out;
 }
 
-/* Typing dot Animations */
 @keyframes typing {
-  0%, 100% {
-    transform: translateY(0);
-    opacity: 0.6;
-  }
-  50% {
-    transform: translateY(-4px);
-    opacity: 1;
-  }
+  0%, 100% { transform: translateY(0); opacity: 0.6; }
+  50% { transform: translateY(-4px); opacity: 1; }
 }
-/* === end Typing dot indicator === */
+/* === end Typing dots indicator === */
 
-.rightBottomTopchatOutter::-webkit-scrollbar {
-    width: 10px;
-}
+/* chat list scrollbar styling */
+.rightBottomTopchatOutter::-webkit-scrollbar { width: 10px; }
+.rightBottomTopchatOutter::-webkit-scrollbar-track { background: var(--allBackgroundColor); border-radius: 10px; }
+.rightBottomTopchatOutter::-webkit-scrollbar-thumb { background: #929292; border-radius: 10px; }
 
-.rightBottomTopchatOutter::-webkit-scrollbar-track {
-  background: var(--allBackgroundColor);
-  border-radius: 10px;
-}
-
-.rightBottomTopchatOutter::-webkit-scrollbar-thumb {
-  background: #929292;
-  border-radius: 10px;
-}
+/* neutralize legacy two-row input structure if still present */
+.rightBottomBottomInputSpace>.textQueryInputBoxSec,
+.rightBottomBottomInputSpace>.pdfFileInputBoxSec,
+.pdfFileInputBoxSec,
+.inneruploadedSide,
+.inneruploadedSide>.queryAndFileSubmitCls,
+.inneruploadedSide>.queryAndFileSubmitClsBS { display: none !important; }
 
 /* ==== bottom input query and file input part ==== */
-
 .rightSideBottomChattingSpace>.rightBottomBottomInputSpace{
     position: relative;
     width: 1050px;
-    height: 10%;
-    /* increase this height when you have multi line input */
-    margin-top: 1%;
-    border-radius: 20px;
+    /* auto height to grow with multiline */
+    min-height: 56px;
+    max-height: 40vh;
+    margin-top: 12px;
+    border-radius: 16px;
 
     display: flex;
-    justify-content: space-between;
     align-items: center;
-    flex-direction: column;
+    gap: 10px;
+    padding: 10px 12px;
     background-color: var(--textInputBGColor);
-    box-shadow: 2px 3px 10px 0px rgba(0,0,0,0.3);
+    box-shadow: 0 6px 24px rgba(0,0,0,0.18), 0 2px 8px rgba(0,0,0,0.12);
+    border: 1px solid #3a3a3a;
+    transition: border-radius .18s ease, min-height .18s ease, padding .18s ease, box-shadow .18s ease;
+}
+
+/* stateful rounding + alignment */
+.rightBottomBottomInputSpace:not(.is-multiline){
+    border-radius: 22px;
+}
+.rightBottomBottomInputSpace.is-multiline{
+    align-items: flex-end;
+    padding-top: 8px;
+    padding-bottom: 8px;
+}
+
+/* inline actions at the right */
+.rightBottomBottomInputSpace .actions{
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin-left: 8px;
+}
+
+/* integrated inline textarea */
+.textQueryInputBox{
+    flex: 1;
+    width: 100%;
+    min-height: 36px;
+    max-height: 220px;
+    height: auto;
+    resize: none;
+    overflow-y: auto;
+    border: none;
+    background: transparent;
+    color: var(--allTextColor);
+    font-size: 1rem;
+    line-height: 1.5;
+    padding: 12px 8px;
+    caret-color: var(--allTextColor);
+}
+
+/* visually center text for one-line state */
+.rightBottomBottomInputSpace:not(.is-multiline) .textQueryInputBox{
+    padding-top: 14px;
+    padding-bottom: 14px;
+}
+
+/* header logo sizing */
+.modelLogoHeader .modelLogoImg{ height: 60px; width: auto; margin-left: 20px; }
+.textQueryInputBox::placeholder{
+    color: #9aa0a6;
+}
+
+/* focus ring */
+.textQueryInputBox:focus{
+    outline: none;
+}
+
+/* icon buttons */
+.iconBtn{
+    appearance: none;
+    border: none;
+    background: transparent;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: background-color .2s ease, transform .06s ease;
+}
+
+.iconBtn:active{
+    transform: scale(0.98);
+}
+
+.iconBtn img{
+    width: 22px;
+    height: 22px;
+}
+
+.uploadBtn{ order: 0; }
+.sendBtn{ order: 2; }
+
+/* subtle hover based on theme */
+[data-theme="dark"] .iconBtn:hover{ background-color: #ffffff14; }
+[data-theme="light"] .iconBtn:hover{ background-color: #0000000e; }
+
+/* responsive widths */
+@media (min-width: 1100px) and (max-width: 1400px) {
+    .rightBottomTopchatOutter>.rightBottomTopchat{
+        position: relative;
+        height: 90%;
+        width:  80%;
+    }
+    .rightSideBottomChattingSpace>.rightBottomBottomInputSpace{
+        position: relative;
+        width:  80%;
+        min-height: 52px;
+        margin-top: 12px;
+    }
+}
+@media screen and (max-width: 1099px) {
+    .rightBottomTopchatOutter>.rightBottomTopchat{
+        position: relative;
+        width:  98%;
+    }
+    .rightSideBottomChattingSpace>.rightBottomBottomInputSpace{
+        position: relative;
+        width:  98%;
+        min-height: 52px;
+        margin-top: 12px;
+    }
+}
+
+/* old two-row structure no longer used */
+/* .rightBottomBottomInputSpace>.textQueryInputBoxSec, .rightBottomBottomInputSpace>.pdfFileInputBoxSec, .pdfFileInputBoxSec>.inneruploadedSide, .inneruploadedSide>.queryAndFileSubmitCls, .inneruploadedSide>.queryAndFileSubmitClsBS { display: none; } */
+
+/* fine tune scrollbars inside textarea */
+.textQueryInputBox::-webkit-scrollbar {
+  width: 8px;
+}
+.textQueryInputBox::-webkit-scrollbar-thumb {
+  background: #7777;
+  border-radius: 8px;
 }
 
 .rightBottomBottomInputSpace>.textQueryInputBoxSec{

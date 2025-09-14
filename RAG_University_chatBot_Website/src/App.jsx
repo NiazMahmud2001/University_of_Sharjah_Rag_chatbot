@@ -39,52 +39,65 @@ const App = () => {
 
 
     useEffect(() => {
-      
-      const handleResize = () => {
-          setIsSmallScreen(window.innerWidth < 830);
-          if (window.innerWidth < 830){
-            document.querySelector('.rightSideTopUserInfoTextRight').style.width = "auto";
-            document.querySelector('.rightSideTopUserInfo').style.justifyContent = "space-between";
-          }else{
-            document.querySelector('.rightSideTopUserInfoTextRight').style.width = "200px";
-          } 
-          if (window.innerWidth<window.innerHeight){
-            document.querySelector(".app-container").style.height = "98vh"
-          }
-      };
-
-      window.addEventListener("resize", handleResize);
-
-      if (window.innerWidth < 830){
-        document.querySelector('.rightSideTopUserInfoTextRight').style.width = "auto";
-        document.querySelector('.rightSideTopUserInfo').style.justifyContent = "space-between";
-      }else{
-        document.querySelector('.rightSideTopUserInfoTextRight').style.width = "200px";
+      // set favicon to modelLogo.png at runtime
+      const linkId = 'dynamic-favicon';
+      let link = document.querySelector(`link#${linkId}`);
+      if (!link) {
+        link = document.createElement('link');
+        link.id = linkId;
+        link.rel = 'icon';
+        link.type = 'image/png';
+        document.head.appendChild(link);
       }
-
-      const initializeTheme = () => {
-        const storedTheme = getColorPreference();
-        theme.value = storedTheme;
-        themColorChanger(storedTheme);
-        setThemeState(storedTheme);
-        reflectPreference();
-      };
-      initializeTheme();
-      const toggleButton = document.querySelector('#theme-toggle');
-      if (toggleButton) {
-        toggleButton.addEventListener('click', onClick);
-      }
-
-      if (window.innerWidth<window.innerHeight){
-        document.querySelector(".app-container").style.height = "98vh"
-      }
-
-      return () => {
-        if (toggleButton) {
-          toggleButton.removeEventListener('click', onClick);
-        }
-      };
+      link.href = modelLogo;
     }, []);
+      
+      useEffect(() => {
+        const handleResize = () => {
+            setIsSmallScreen(window.innerWidth < 830);
+            if (window.innerWidth < 830){
+              document.querySelector('.rightSideTopUserInfoTextRight').style.width = "auto";
+              document.querySelector('.rightSideTopUserInfo').style.justifyContent = "space-between";
+            }else{
+              document.querySelector('.rightSideTopUserInfoTextRight').style.width = "200px";
+            } 
+            if (window.innerWidth<window.innerHeight){
+              document.querySelector(".app-container").style.height = "98vh"
+            }
+        };
+
+        window.addEventListener("resize", handleResize);
+
+        if (window.innerWidth < 830){
+          document.querySelector('.rightSideTopUserInfoTextRight').style.width = "auto";
+          document.querySelector('.rightSideTopUserInfo').style.justifyContent = "space-between";
+        }else{
+          document.querySelector('.rightSideTopUserInfoTextRight').style.width = "200px";
+        }
+
+        const initializeTheme = () => {
+          const storedTheme = getColorPreference();
+          theme.value = storedTheme;
+          themColorChanger(storedTheme);
+          setThemeState(storedTheme);
+          reflectPreference();
+        };
+        initializeTheme();
+        const toggleButton = document.querySelector('#theme-toggle');
+        if (toggleButton) {
+          toggleButton.addEventListener('click', onClick);
+        }
+
+        if (window.innerWidth<window.innerHeight){
+          document.querySelector(".app-container").style.height = "98vh"
+        }
+
+        return () => {
+          if (toggleButton) {
+            toggleButton.removeEventListener('click', onClick);
+          }
+        };
+      }, []);
 
 
 
@@ -241,6 +254,15 @@ const App = () => {
       }finally{
         setIsLoading(false);
         setInputText('');
+        // hard reset input height and rounded state
+        const el = document.querySelector('.textQueryInputBox');
+        if (el){
+          el.style.height = 'auto';
+        }
+        const cont = document.querySelector('.rightBottomBottomInputSpace');
+        if (cont){
+          cont.classList.remove('is-multiline');
+        }
       }
     }
 
@@ -332,6 +354,9 @@ const App = () => {
                       }
                     })()}
                   </div>
+                  <div className="modelLogoHeader">
+                    <img src={modelLogo} className='modelLogoImg' alt="App Logo" />
+                  </div>
 
                   <div className="rightSideTopUserInfoText">
                     <div className="userloginBtn">
@@ -379,50 +404,60 @@ const App = () => {
                 </div>
             </div>
             <div className="rightBottomBottomInputSpace">
-              <div className="textQueryInputBoxSec">
-                  <input
-                      type="text"
+              {(() => {
+                const uploadIcon = themeState === 'dark' ? fileUploadForWhiteTheme : fileUpload;
+                return (
+                  <>
+                    <textarea
                       value={inputText}
                       onChange={(e) => setInputText(e.target.value)}
                       className="textQueryInputBox"
-                      placeholder="Please ask you question"
-                      onKeyDown={(e)=>{
-                        if (e.key == "Enter"){
-                          submitOnQuryBtnClicked()
+                      placeholder="Type your question..."
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && !e.shiftKey) {
+                          e.preventDefault();
+                          submitOnQuryBtnClicked();
+                        }
+                      }}
+                      onInput={(e) => {
+                        const el = e.target;
+                        // auto expand
+                        el.style.height = 'auto';
+                        const h = Math.min(el.scrollHeight, 220);
+                        el.style.height = h + 'px';
+                        // toggle rounded state on container
+                        const cont = document.querySelector('.rightBottomBottomInputSpace');
+                        if (cont){
+                          if (h > 48) cont.classList.add('is-multiline');
+                          else cont.classList.remove('is-multiline');
                         }
                       }}
                       disabled={isLoading}
-                  />
-              </div>
-              <div className="pdfFileInputBoxSec">
-                  {(()=>{
-                    if (themeState == 'dark'){
-                      return (
-                        <div className="inneruploadedSide">
-                            <img src={fileUploadForWhiteTheme} className='queryAndFileSubmitCls' />
-                            <img 
-                                src={querySubmit} 
-                                className='queryAndFileSubmitClsBS' 
-                                onClick={()=>{submitOnQuryBtnClicked()}}
-                                disabled={isLoading}
-                            />
-                        </div>
-                      );
-                    }else{
-                      return (
-                        <div className="inneruploadedSide">
-                            <img src={fileUpload} className='queryAndFileSubmitCls' />
-                            <img 
-                              src={querySubmit} 
-                              className='queryAndFileSubmitClsBS' 
-                              onClick={()=>{submitOnQuryBtnClicked()}}
-                              disabled={isLoading}
-                            />
-                        </div>
-                      );
-                    }
-                  })()}
-              </div>
+                    />
+
+                    <div className="actions">
+                      <button
+                        className="iconBtn attachBtn"
+                        type="button"
+                        title="Attach files"
+                        disabled={isLoading}
+                      >
+                        <img src={uploadIcon} alt="Attach" />
+                      </button>
+
+                      <button
+                        className="iconBtn sendBtn"
+                        type="button"
+                        title="Send"
+                        onClick={() => { submitOnQuryBtnClicked(); }}
+                        disabled={isLoading}
+                      >
+                        <img src={querySubmit} alt="Send" />
+                      </button>
+                    </div>
+                  </>
+                );
+              })()}
             </div>
 
           </div>
