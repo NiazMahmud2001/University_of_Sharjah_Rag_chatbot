@@ -2,6 +2,9 @@
 
 import React, { useEffect, useState } from "react";
 import Image from "next/image";
+import SplitText from "./components/SplitText";
+import ShinyText from "../components/ShinyText";
+import { Send, Upload, Plus, Trash2, Pencil, Menu, X, Check, Loader2 } from "lucide-react";
 
 type Message = { text: string; isBot: boolean };
 
@@ -50,45 +53,12 @@ export default function Home() {
     const match = document.cookie.match(new RegExp("(^| )" + name + "=([^;]+)"));
     return match ? match[2] : null;
   }
-  const [theme, setTheme] = useState<"light" | "dark">("light");
   // chat sessions and sidebar
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  const storageKey = "theme-preference";
-  const getColorPreference = (): "light" | "dark" => {
-    if (typeof window === "undefined") return "light";
-    const stored = localStorage.getItem(storageKey) as "light" | "dark" | null;
-    if (stored) return stored;
-    return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
-  };
-  const applyTheme = (value: "light" | "dark") => {
-    const root = document.documentElement;
-    root.setAttribute("data-theme", value);
-    // ensure Tailwind dark: variants respond
-    if (value === "dark") root.classList.add("dark");
-    else root.classList.remove("dark");
-    setTheme(value);
-  };
-  const setPreference = (value: "light" | "dark") => {
-    localStorage.setItem(storageKey, value);
-    applyTheme(value);
-  };
-  const toggleTheme = () => {
-    const next = theme === "light" ? "dark" : "light";
-    setPreference(next);
-  };
-
   useEffect(() => {
-    const initial = getColorPreference();
-    applyTheme(initial);
-    const media = window.matchMedia("(prefers-color-scheme: dark)");
-    const onChange = (e: MediaQueryListEvent) => {
-      const stored = localStorage.getItem(storageKey);
-      if (!stored) applyTheme(e.matches ? "dark" : "light");
-    };
-    media.addEventListener("change", onChange);
     // load chat sessions from localStorage/cookie
     const raw = localStorage.getItem(STORAGE_KEY_CHATS);
     if (raw) {
@@ -119,8 +89,6 @@ export default function Home() {
       setMessages([]);
       setCookie(COOKIE_ACTIVE, id);
     }
-
-    return () => media.removeEventListener("change", onChange);
   }, []);
 
   // persist sessions and active id
@@ -140,13 +108,40 @@ export default function Home() {
     setUploadedFiles((prev) => prev.filter((_, i) => i !== index));
   };
 
+  // Inline rename state
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingTitle, setEditingTitle] = useState<string>("");
+  const startRename = (id: string) => {
+    const current = sessions.find((s) => s.id === id)?.title || "";
+    setEditingId(id);
+    setEditingTitle(current);
+  };
+  const saveRename = () => {
+    if (!editingId) return;
+    const nextTitle = editingTitle.trim();
+    setSessions((prev) =>
+      prev.map((s) =>
+        s.id === editingId ? { ...s, title: nextTitle || s.title, updatedAt: Date.now() } : s
+      )
+    );
+    setEditingId(null);
+    setEditingTitle("");
+  };
+  const cancelRename = () => {
+    setEditingId(null);
+    setEditingTitle("");
+  };
+
   async function handleQuery() {
-    if (!inputText.trim() || !activeSessionId) return;
+    const value = inputText.trim();
+    if (!value || !activeSessionId) return;
+    // Clear input immediately on send
+    setInputText("");
     try {
       setIsLoading(true);
       // add user message to state and active session
       setMessages((prev) => {
-        const updated = [...prev, { text: inputText, isBot: false }];
+        const updated = [...prev, { text: value, isBot: false }];
         setSessions((prevSessions) =>
           prevSessions.map((s) =>
             s.id === activeSessionId
@@ -154,7 +149,7 @@ export default function Home() {
                   ...s,
                   messages: updated,
                   updatedAt: Date.now(),
-                  title: s.title === "New Chat" && inputText ? inputText.slice(0, 30) : s.title,
+                  title: s.title === "New Chat" && value ? value.slice(0, 30) : s.title,
                 }
               : s
           )
@@ -165,7 +160,7 @@ export default function Home() {
       const res = await fetch("/api/ask", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ query: inputText, isChat: true }),
+        body: JSON.stringify({ query: value, isChat: true }),
       });
 
       if (!res.ok) {
@@ -200,7 +195,6 @@ export default function Home() {
       });
     } finally {
       setIsLoading(false);
-      setInputText("");
     }
   }
 
@@ -256,7 +250,16 @@ export default function Home() {
       <div className="min-h-screen bg-background text-foreground flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
           <Image src="/modelLogo_with_text.png" alt="NEXLY Logo" width={220} height={60} priority className="h-14 w-auto" />
-          <div className="text-sm opacity-70">Loading...</div>
+          <SplitText
+            text="NEXLY"
+            tag="h2"
+            className="text-2xl sm:text-3xl font-semibold tracking-wide"
+            splitType="chars"
+            delay={80}
+            duration={0.5}
+            from={{ opacity: 0, y: 24 }}
+            to={{ opacity: 1, y: 0 }}
+          />
         </div>
       </div>
     );
@@ -265,11 +268,11 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-background text-foreground font-sans md:pl-72">
       {/* Desktop Sidebar */}
-      <aside className={`hidden md:flex fixed left-0 top-0 bottom-0 w-72 flex-col p-4 z-40 border-r ${theme === 'dark' ? 'bg-zinc-900 text-zinc-100 border-white/10' : 'bg-white text-zinc-900 border-black/10'}`}>
-        <div className="flex items-center justify-between">
-          <Image src="/modelLogo_with_text.png" alt="NEXLY Logo" width={128} height={32} className="h-8 w-auto" />
-        </div>
-        <button onClick={newChat} className="mt-3 h-10 px-3 rounded-xl bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 text-white text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500">+ New Chat</button>
+      <aside className={"hidden md:flex fixed left-0 top-0 bottom-0 w-72 flex-col p-4 z-40 border-r bg-white text-zinc-900 border-black/10"}>
+        <button onClick={newChat} className="mt-3 h-10 px-3 rounded-xl bg-blue-500 hover:bg-blue-600 text-white text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 inline-flex items-center gap-2">
+          <Plus size={16} />
+          <ShinyText text="New Chat" speed={4} variant="onBlue" />
+        </button>
         <div className="mt-4 overflow-y-auto chat-scroll">
           <ul className="space-y-1">
             {sessions.map((s) => (
@@ -281,43 +284,70 @@ export default function Home() {
                   onKeyDown={(e) => {
                     if (e.key === "Enter" || e.key === " ") selectSession(s.id);
                   }}
-                  className={`w-full flex items-center justify-between text-left px-3 py-2 rounded-lg border ${activeSessionId === s.id ? (theme === 'dark' ? 'bg-blue-900/30 border-blue-700' : 'bg-blue-50 border-blue-200') : (theme === 'dark' ? 'bg-zinc-800 border-white/10' : 'bg-zinc-50 border-black/5')}`}
+                  className={`w-full flex items-center justify-between text-left px-3 py-2 rounded-lg border ${activeSessionId === s.id ? 'bg-blue-50 border-blue-200' : 'bg-zinc-50 border-black/5'}`}
                 >
-                  <span className="truncate text-sm">{s.title}</span>
-                  <span className={`flex items-center gap-1`}>
-                    <button
-                      onClick={(e) => { e.stopPropagation(); renameSession(s.id); }}
-                      className="inline-flex items-center justify-center w-7 h-7 rounded-md hover:bg-zinc-100 dark:hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      title="Rename"
-                      aria-label="Rename chat"
-                    >
-                      <svg className="text-zinc-600 dark:text-zinc-300" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M12 20h9" />
-                        <path d="M16.5 3.5a2.121 2.121 0 1 1 3 3L7 19l-4 1 1-4 12.5-12.5z" />
-                      </svg>
-                    </button>
-                    <button
-                      onClick={(e) => { e.stopPropagation(); deleteSession(s.id); }}
-                      className="inline-flex items-center justify-center w-7 h-7 rounded-md hover:bg-red-50 dark:hover:bg-red-900/30 focus:outline-none focus:ring-2 focus:ring-red-500"
-                      title="Delete"
-                      aria-label="Delete chat"
-                    >
-                      <svg className="text-red-600 dark:text-red-400" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <polyline points="3 6 5 6 21 6" />
-                        <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
-                        <path d="M10 11v6" />
-                        <path d="M14 11v6" />
-                        <path d="M9 6V4a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2" />
-                      </svg>
-                    </button>
-                  </span>
+                  {editingId === s.id ? (
+                    <div className="flex items-center gap-3 w-full" onClick={(e) => e.stopPropagation()}>
+                      <input
+                        className="flex-1 min-w-0 h-9 rounded-md px-3 border border-black/10 bg-white text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        value={editingTitle}
+                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEditingTitle(e.target.value)}
+                        onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => {
+                          if (e.key === "Enter") saveRename();
+                          if (e.key === "Escape") cancelRename();
+                        }}
+                        autoFocus
+                        aria-label="Edit chat title"
+                      />
+                      <div className="flex items-center gap-0">
+                        <button
+                          onClick={(e) => { e.stopPropagation(); saveRename(); }}
+                          className="inline-flex items-center justify-center w-8 h-8 flex-shrink-0 rounded-md bg-blue-600 text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          title="Save"
+                          aria-label="Save"
+                        >
+                          <Check size={16} />
+                        </button>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); cancelRename(); }}
+                          className="inline-flex items-center justify-center w-8 h-8 flex-shrink-0 rounded-md hover:bg-zinc-100 focus:outline-none focus:ring-2 focus:ring-zinc-400"
+                          title="Cancel"
+                          aria-label="Cancel"
+                        >
+                          <X size={16} />
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      <span className="truncate text-sm">{s.title}</span>
+                      <span className={`flex items-center gap-1`}>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); startRename(s.id); }}
+                          className="inline-flex items-center justify-center w-7 h-7 rounded-md hover:bg-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          title="Rename"
+                          aria-label="Rename chat"
+                        >
+                          <Pencil size={16} className="text-zinc-600" />
+                        </button>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); deleteSession(s.id); }}
+                          className="inline-flex items-center justify-center w-7 h-7 rounded-md hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-red-500"
+                          title="Delete"
+                          aria-label="Delete chat"
+                        >
+                          <Trash2 size={16} className="text-red-600" />
+                        </button>
+                      </span>
+                    </>
+                  )}
                 </div>
               </li>
             ))}
           </ul>
         </div>
-        <div className={`${theme === 'dark' ? 'border-white/10' : 'border-black/10'} mt-auto pt-3 border-t`}>
-          <div className={`${theme === 'dark' ? 'text-zinc-300' : 'text-zinc-500'} text-xs`}>nexly 2.0 version</div>
+        <div className={`mt-auto pt-3 border-t border-black/10`}>
+          <div className={`text-xs text-zinc-500`}>nexly 2.0 version</div>
         </div>
       </aside>
 
@@ -325,12 +355,16 @@ export default function Home() {
       {sidebarOpen && (
         <div className="fixed inset-0 z-50 md:hidden">
           <div className="absolute inset-0 bg-black/40" onClick={() => setSidebarOpen(false)} />
-          <aside className={`absolute left-0 top-0 h-full w-72 p-4 border-r ${theme === 'dark' ? 'bg-zinc-900 text-zinc-100 border-white/10' : 'bg-white text-zinc-900 border-black/10'}`}>
-            <div className="flex items-center justify-between">
-              <Image src="/modelLogo_with_text.png" alt="NEXLY Logo" width={128} height={32} className="h-8 w-auto" />
-              <button onClick={() => setSidebarOpen(false)} className="inline-flex items-center justify-center w-9 h-9 rounded-full border border-black/10 dark:border-white/20" aria-label="Close sidebar">✕</button>
+          <aside className={`absolute left-0 top-0 h-full w-72 p-4 border-r bg-white text-zinc-900 border-black/10`}>
+            <div className="flex items-center justify-end">
+              <button onClick={() => setSidebarOpen(false)} className="inline-flex items-center justify-center w-9 h-9 rounded-full border border-black/10" aria-label="Close sidebar">
+                <X size={18} />
+              </button>
             </div>
-            <button onClick={newChat} className="mt-3 h-10 px-3 rounded-xl bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 text-white text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500">+ New Chat</button>
+            <button onClick={newChat} className="mt-3 h-10 px-3 rounded-xl bg-blue-500 hover:bg-blue-600 text-white text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 inline-flex items-center gap-2">
+              <Plus size={16} />
+              <ShinyText text="New Chat" speed={4} variant="onBlue" />
+            </button>
             <div className="mt-4 overflow-y-auto chat-scroll">
               <ul className="space-y-1">
                 {sessions.map((s) => (
@@ -342,43 +376,70 @@ export default function Home() {
                       onKeyDown={(e) => {
                         if (e.key === "Enter" || e.key === " ") selectSession(s.id);
                       }}
-                      className={`w-full flex items-center justify-between text-left px-3 py-2 rounded-lg border ${activeSessionId === s.id ? (theme === 'dark' ? 'bg-blue-900/30 border-blue-700' : 'bg-blue-50 border-blue-200') : (theme === 'dark' ? 'bg-zinc-800 border-white/10' : 'bg-zinc-50 border-black/5')}`}
+                      className={`w-full flex items-center justify-between text-left px-3 py-2 rounded-lg border ${activeSessionId === s.id ? 'bg-blue-50 border-blue-200' : 'bg-zinc-50 border-black/5'}`}
                     >
-                      <span className="truncate text-sm">{s.title}</span>
-                      <span className={`flex items-center gap-1`}>
-                        <button
-                          onClick={(e) => { e.stopPropagation(); renameSession(s.id); }}
-                          className="inline-flex items-center justify-center w-7 h-7 rounded-md hover:bg-zinc-100 dark:hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                          title="Rename"
-                          aria-label="Rename chat"
-                        >
-                          <svg className="text-zinc-600 dark:text-zinc-300" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <path d="M12 20h9" />
-                            <path d="M16.5 3.5a2.121 2.121 0 1 1 3 3L7 19l-4 1 1-4 12.5-12.5z" />
-                          </svg>
-                        </button>
-                        <button
-                          onClick={(e) => { e.stopPropagation(); deleteSession(s.id); }}
-                          className="inline-flex items-center justify-center w-7 h-7 rounded-md hover:bg-red-50 dark:hover:bg-red-900/30 focus:outline-none focus:ring-2 focus:ring-red-500"
-                          title="Delete"
-                          aria-label="Delete chat"
-                        >
-                          <svg className="text-red-600 dark:text-red-400" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <polyline points="3 6 5 6 21 6" />
-                            <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
-                            <path d="M10 11v6" />
-                            <path d="M14 11v6" />
-                            <path d="M9 6V4a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2" />
-                          </svg>
-                        </button>
-                      </span>
+                      {editingId === s.id ? (
+                        <div className="flex items-center gap-3 w-full" onClick={(e) => e.stopPropagation()}>
+                          <input
+                            className="flex-1 min-w-0 h-9 rounded-md px-3 border border-black/10 bg-white text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            value={editingTitle}
+                            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEditingTitle(e.target.value)}
+                            onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => {
+                              if (e.key === "Enter") saveRename();
+                              if (e.key === "Escape") cancelRename();
+                            }}
+                            autoFocus
+                            aria-label="Edit chat title"
+                          />
+                          <div className="flex items-center gap-0">
+                            <button
+                              onClick={(e) => { e.stopPropagation(); saveRename(); }}
+                              className="inline-flex items-center justify-center w-8 h-8 flex-shrink-0 rounded-md bg-blue-600 text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                              title="Save"
+                              aria-label="Save"
+                            >
+                              <Check size={16} />
+                            </button>
+                            <button
+                              onClick={(e) => { e.stopPropagation(); cancelRename(); }}
+                              className="inline-flex items-center justify-center w-8 h-8 flex-shrink-0 rounded-md hover:bg-zinc-100 focus:outline-none focus:ring-2 focus:ring-zinc-400"
+                              title="Cancel"
+                              aria-label="Cancel"
+                            >
+                              <X size={16} />
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <>
+                          <span className="truncate text-sm">{s.title}</span>
+                          <span className={`flex items-center gap-1`}>
+                            <button
+                              onClick={(e) => { e.stopPropagation(); startRename(s.id); }}
+                              className="inline-flex items-center justify-center w-7 h-7 rounded-md hover:bg-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                              title="Rename"
+                              aria-label="Rename chat"
+                            >
+                              <Pencil size={16} className="text-zinc-600" />
+                            </button>
+                            <button
+                              onClick={(e) => { e.stopPropagation(); deleteSession(s.id); }}
+                              className="inline-flex items-center justify-center w-7 h-7 rounded-md hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-red-500"
+                              title="Delete"
+                              aria-label="Delete chat"
+                            >
+                              <Trash2 size={16} className="text-red-600" />
+                            </button>
+                          </span>
+                        </>
+                      )}
                     </div>
                   </li>
                 ))}
               </ul>
             </div>
-            <div className={`${theme === 'dark' ? 'border-white/10' : 'border-black/10'} mt-auto pt-3 border-t`}>
-              <div className={`${theme === 'dark' ? 'text-zinc-300' : 'text-zinc-500'} text-xs`}>nexly 2.0 version</div>
+            <div className={`mt-auto pt-3 border-t border-black/10`}>
+              <div className={`text-xs text-zinc-500`}>nexly 2.0 version</div>
             </div>
           </aside>
         </div>
@@ -387,42 +448,14 @@ export default function Home() {
       <main className="max-w-3xl mx-auto px-4 sm:px-6 py-8 flex flex-col gap-6">
         <header className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <button className="md:hidden inline-flex items-center justify-center w-9 h-9 rounded-full border border-black/10 dark:border-white/20" onClick={() => setSidebarOpen(true)} aria-label="Open sidebar">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+            <button className="md:hidden inline-flex items-center justify-center w-9 h-9 rounded-full border border-black/10" onClick={() => setSidebarOpen(true)} aria-label="Open sidebar">
+              <Menu size={20} />
             </button>
             <Image src="/modelLogo_with_text.png" alt="NEXLY Logo" width={128} height={32} className="h-8 w-auto" />
           </div>
           <div className="flex items-center gap-3">
             <div className="text-xs sm:text-sm opacity-70">Your New AI-Powered Advisor</div>
-            {theme === "dark" ? (
-              <Image src="/uosSvg.svg" alt="UOS icon" width={22} height={22} className="opacity-80" />
-            ) : (
-              <Image src="/uosSvgForWhiteTheme.svg" alt="UOS icon" width={22} height={22} className="opacity-80" />
-            )}
-            <button
-              className="inline-flex items-center justify-center w-9 h-9 rounded-full border border-black/10 dark:border-white/20"
-              onClick={toggleTheme}
-              title="Toggles light & dark"
-              aria-label={theme}
-            >
-              <svg className="sun-and-moon" aria-hidden="true" width="22" height="22" viewBox="0 0 24 24">
-                <mask className="moon" id="moon-mask">
-                  <rect x="0" y="0" width="100%" height="100%" fill="white" />
-                  <circle cx="24" cy="10" r="6" fill="black" />
-                </mask>
-                <circle className="sun" cx="12" cy="12" r="6" mask="url(#moon-mask)" fill="currentColor" />
-                <g className="sun-beams" stroke="currentColor">
-                  <line x1="12" y1="1" x2="12" y2="3" />
-                  <line x1="12" y1="21" x2="12" y2="23" />
-                  <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" />
-                  <line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
-                  <line x1="1" y1="12" x2="3" y2="12" />
-                  <line x1="21" y1="12" x2="23" y2="12" />
-                  <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" />
-                  <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
-                </g>
-              </svg>
-            </button>
+            <Image src="/uosSvgForWhiteTheme.svg" alt="UOS icon" width={22} height={22} className="opacity-80" />
           </div>
         </header>
 
@@ -431,7 +464,7 @@ export default function Home() {
           {messages.map((msg, idx) => (
             <div key={idx} className={`mb-3 flex ${msg.isBot ? "justify-start" : "justify-end"}`}>
               <div
-                className={`max-w-[80%] rounded-2xl px-4 py-3 text-sm leading-6 ${msg.isBot ? "bg-zinc-50 text-zinc-900 dark:bg-zinc-800 dark:text-zinc-100" : "bg-blue-600 dark:bg-blue-500 text-white"}`}
+                className={`max-w-[80%] rounded-2xl px-4 py-3 text-sm leading-6 ${msg.isBot ? "bg-zinc-50 text-zinc-900" : "bg-blue-600 text-white"}`}
                 dangerouslySetInnerHTML={{ __html: msg.text }}
               />
             </div>
@@ -439,9 +472,9 @@ export default function Home() {
 
           {isLoading && (
             <div className="mt-2 flex items-center gap-2" aria-live="polite" aria-label="Assistant is typing">
-              <span className="w-2.5 h-2.5 rounded-full bg-zinc-200 dark:bg-zinc-300 opacity-90 animate-bounce" style={{ animationDelay: "0ms" }} />
-              <span className="w-2.5 h-2.5 rounded-full bg-zinc-200 dark:bg-zinc-300 opacity-90 animate-bounce" style={{ animationDelay: "150ms" }} />
-              <span className="w-2.5 h-2.5 rounded-full bg-zinc-200 dark:bg-zinc-300 opacity-90 animate-bounce" style={{ animationDelay: "300ms" }} />
+              <span className="w-2.5 h-2.5 rounded-full bg-zinc-300 opacity-90 animate-bounce" style={{ animationDelay: "0ms" }} />
+              <span className="w-2.5 h-2.5 rounded-full bg-zinc-300 opacity-90 animate-bounce" style={{ animationDelay: "150ms" }} />
+              <span className="w-2.5 h-2.5 rounded-full bg-zinc-300 opacity-90 animate-bounce" style={{ animationDelay: "300ms" }} />
             </div>
           )}
         </div>
@@ -449,11 +482,11 @@ export default function Home() {
         {/* Input & actions - removed shadows and backdrop blur */}
         <div className="fixed bottom-0 left-0 right-0 z-50 md:pl-72">
           <div className="max-w-3xl mx-auto px-4 sm:px-6 py-3">
-            <div className="rounded-2xl border border-black/5 dark:border-white/15 p-3 sm:p-4 bg-white dark:bg-zinc-900">
+            <div className="rounded-2xl border border-black/5 p-3 sm:p-4 bg-white">
               {uploadedFiles.length > 0 && (
                 <div className="mb-3 flex flex-wrap gap-2">
                   {uploadedFiles.map((f, i) => (
-                    <div key={i} className="relative inline-flex items-center gap-2 px-2 py-1 rounded-md bg-zinc-100 dark:bg-zinc-700 text-xs text-zinc-900 dark:text-zinc-100">
+                    <div key={i} className="relative inline-flex items-center gap-2 px-2 py-1 rounded-md bg-zinc-100 text-xs text-zinc-900">
                       <span>{truncateFileName(f.name)}</span>
                       <button className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-zinc-400 text-white text-[10px]" onClick={() => removeFile(i)} aria-label="Remove file">×</button>
                     </div>
@@ -468,14 +501,16 @@ export default function Home() {
                   onChange={(e: React.ChangeEvent<HTMLInputElement>) => setInputText(e.target.value)}
                   onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => { if (e.key === "Enter") handleQuery(); }}
                   placeholder="Type your question..."
-                  className="flex-1 h-11 rounded-xl px-3 border border-black/5 dark:border-white/15 bg-background text-foreground placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="flex-1 h-11 rounded-xl px-3 border border-black/5 bg-background text-foreground placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   disabled={isLoading}
                 />
-                <button onClick={handleQuery} disabled={isLoading} className="h-11 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 focus:ring-2 focus:ring-blue-600 text-white text-sm font-medium disabled:opacity-50">
-                  {isLoading ? "Sending..." : "Send"}
+                <button onClick={handleQuery} disabled={isLoading} className="h-11 px-4 rounded-xl bg-blue-500 hover:bg-blue-600 focus:ring-2 focus:ring-blue-500 text-white text-sm font-medium disabled:opacity-50 inline-flex items-center gap-2">
+                  <Send size={18} />
+                  <ShinyText text="Send" speed={4} variant="onBlue" />
                 </button>
-                <label className="h-11 px-3 rounded-xl bg-zinc-50 hover:bg-zinc-100 border border-zinc-200 text-sm text-zinc-900 dark:bg-zinc-800 dark:hover:bg-zinc-700 dark:border-white/20 dark:text-zinc-100 cursor-pointer inline-flex items-center">
-                  Upload
+                <label className="h-11 px-3 rounded-xl bg-zinc-50 hover:bg-zinc-100 border border-zinc-200 text-sm text-zinc-900 cursor-pointer inline-flex items-center gap-2">
+                  <Upload size={18} />
+                  <span>Upload</span>
                   <input type="file" multiple accept=".pdf,image/*" className="hidden" onChange={(e: React.ChangeEvent<HTMLInputElement>) => { const files = Array.from(e.target.files || []); setUploadedFiles((prev) => [...prev, ...files]); }} />
                 </label>
               </div>
