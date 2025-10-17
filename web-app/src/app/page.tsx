@@ -1,10 +1,12 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import Image from "next/image";
 import SplitText from "./components/SplitText";
 import ShinyText from "../components/ShinyText";
 import { Send, Upload, Plus, Trash2, Pencil, Menu, X, Check, Loader2 } from "lucide-react";
+import { createClient as createSupabaseClient } from "@/utils/supabase/browser";
+import { useRouter } from "next/navigation";
 
 type Message = { text: string; isBot: boolean };
 
@@ -23,11 +25,19 @@ function truncateFileName(filename: string, maxLength = 10) {
 }
 
 export default function Home() {
+  const router = useRouter();
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputText, setInputText] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
   const [showSplash, setShowSplash] = useState(true);
+  const [authChecked, setAuthChecked] = useState(false);
+  // Auto-resize textarea for multi-line input
+  const textAreaRef = useRef<HTMLTextAreaElement>(null);
+  // Track mobile viewport to change Enter behavior
+  const [isMobile, setIsMobile] = useState(false);
+  // Track textarea height to ensure reliable visual growth on phones
+  const [inputHeight, setInputHeight] = useState<number>(44);
   // Add chat session type and local persistence helpers
   type ChatSession = {
     id: string;
@@ -59,7 +69,26 @@ export default function Home() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   useEffect(() => {
-    // load chat sessions from localStorage/cookie
+    // Protect route: redirect to /login when not authenticated
+    (async () => {
+      try {
+        const supabase = createSupabaseClient();
+        const { data } = await supabase.auth.getUser();
+        if (!data?.user) {
+          router.replace("/login");
+          return;
+        }
+        setAuthChecked(true);
+      } catch {
+        router.replace("/login");
+      }
+    })();
+  }, [router]);
+
+
+  useEffect(() => {
+    // initialize chat sessions only after auth is checked
+    if (!authChecked) return;
     const raw = localStorage.getItem(STORAGE_KEY_CHATS);
     if (raw) {
       try {
@@ -89,19 +118,37 @@ export default function Home() {
       setMessages([]);
       setCookie(COOKIE_ACTIVE, id);
     }
-  }, []);
+  }, [authChecked]);
 
   // persist sessions and active id
   useEffect(() => {
+    if (!authChecked) return;
     if (sessions.length) {
       localStorage.setItem(STORAGE_KEY_CHATS, JSON.stringify(sessions));
     }
     if (activeSessionId) setCookie(COOKIE_ACTIVE, activeSessionId);
-  }, [sessions, activeSessionId]);
+  }, [sessions, activeSessionId, authChecked]);
 
   useEffect(() => {
     const t = setTimeout(() => setShowSplash(false), 2000);
     return () => clearTimeout(t);
+  }, []);
+
+  // Recompute textarea height on input changes
+  useEffect(() => {
+    const el = textAreaRef.current;
+    if (!el) return;
+    el.style.height = "auto";
+    const next = isMobile ? el.scrollHeight : Math.min(el.scrollHeight, 160); // uncap on phones
+    setInputHeight(next);
+  }, [inputText, isMobile]);
+
+  // Determine if viewport is mobile (sm breakpoint)
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 640);
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
   }, []);
 
   const removeFile = (index: number) => {
@@ -249,7 +296,7 @@ export default function Home() {
     return (
       <div className="min-h-screen bg-background text-foreground flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
-          <Image src="/modelLogo_with_text.png" alt="NEXLY Logo" width={220} height={60} priority className="h-14 w-auto" />
+          <Image src="/b.svg" alt="NEXLY Logo" width={110} height={110} priority className="h-20 w-auto" />
           <SplitText
             text="NEXLY"
             tag="h2"
@@ -265,8 +312,8 @@ export default function Home() {
     );
   }
 
-  return (
-    <div className="min-h-screen bg-background text-foreground font-sans md:pl-72">
+  return authChecked ? (
+    <div className="min-h-screen bg-background text-foreground font-sans md:pl-72 overflow-x-hidden">
       {/* Desktop Sidebar */}
       <aside className={"hidden md:flex fixed left-0 top-0 bottom-0 w-72 flex-col p-4 z-40 border-r bg-white text-zinc-900 border-black/10"}>
         <button onClick={newChat} className="mt-3 h-10 px-3 rounded-xl bg-blue-500 hover:bg-blue-600 text-white text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 inline-flex items-center gap-2">
@@ -346,8 +393,14 @@ export default function Home() {
             ))}
           </ul>
         </div>
-        <div className={`mt-auto pt-3 border-t border-black/10`}>
-          <div className={`text-xs text-zinc-500`}>nexly 2.0 version</div>
+        <div className="mt-auto pt-3 border-t border-black/10">
+          <button
+            onClick={() => router.push('/profile')}
+            className="w-full h-10 px-3 rounded-xl border border-black/10 hover:bg-zinc-100 text-sm font-medium"
+          >
+            Profile
+          </button>
+          <div className="mt-2 text-xs text-zinc-500">nexly 2.0 version</div>
         </div>
       </aside>
 
@@ -355,7 +408,7 @@ export default function Home() {
       {sidebarOpen && (
         <div className="fixed inset-0 z-50 md:hidden">
           <div className="absolute inset-0 bg-black/40" onClick={() => setSidebarOpen(false)} />
-          <aside className={`absolute left-0 top-0 h-full w-72 p-4 border-r bg-white text-zinc-900 border-black/10`}>
+          <aside className={`absolute left-0 top-0 h-full w-72 p-4 border-r bg-white text-zinc-900 border-black/10 flex flex-col`}>
             <div className="flex items-center justify-end">
               <button onClick={() => setSidebarOpen(false)} className="inline-flex items-center justify-center w-9 h-9 rounded-full border border-black/10" aria-label="Close sidebar">
                 <X size={18} />
@@ -438,33 +491,36 @@ export default function Home() {
                 ))}
               </ul>
             </div>
-            <div className={`mt-auto pt-3 border-t border-black/10`}>
-              <div className={`text-xs text-zinc-500`}>nexly 2.0 version</div>
+            <div className="mt-auto pt-3 border-t border-black/10">
+              <button
+                onClick={() => router.push('/profile')}
+                className="w-full h-10 px-3 rounded-xl border border-black/10 hover:bg-zinc-100 text-sm font-medium"
+              >
+                Profile
+              </button>
+              <div className="mt-2 text-xs text-zinc-500">nexly 2.0 version</div>
             </div>
           </aside>
         </div>
       )}
 
       <main className="max-w-3xl mx-auto px-4 sm:px-6 py-8 flex flex-col gap-6">
-        <header className="flex items-center justify-between">
+        <header className="flex items-center justify-start">
           <div className="flex items-center gap-3">
             <button className="md:hidden inline-flex items-center justify-center w-9 h-9 rounded-full border border-black/10" onClick={() => setSidebarOpen(true)} aria-label="Open sidebar">
               <Menu size={20} />
             </button>
-            <Image src="/modelLogo_with_text.png" alt="NEXLY Logo" width={128} height={32} className="h-8 w-auto" />
-          </div>
-          <div className="flex items-center gap-3">
-            <div className="text-xs sm:text-sm opacity-70">Your New AI-Powered Advisor</div>
-            <Image src="/uosSvgForWhiteTheme.svg" alt="UOS icon" width={22} height={22} className="opacity-80" />
+            <Image src="/b.svg" alt="NEXLY Logo" width={80} height={40} className="h-8 w-auto sm:h-12" />
+            <Image src="/uosSvgForWhiteTheme.svg" alt="UOS icon" width={80} height={60} className="h-10 w-auto sm:h-14" />
           </div>
         </header>
 
         {/* Chat messages - removed shadows */}
-        <div className="flex-1 min-h-[50vh] p-4 sm:p-5 pb-28 overflow-y-auto chat-scroll">
+        <div className="flex-1 min-h-[50vh] p-4 sm:p-5 pb-28 overflow-y-auto overflow-x-hidden chat-scroll">
           {messages.map((msg, idx) => (
             <div key={idx} className={`mb-3 flex ${msg.isBot ? "justify-start" : "justify-end"}`}>
               <div
-                className={`max-w-[80%] rounded-2xl px-4 py-3 text-sm leading-6 ${msg.isBot ? "bg-zinc-50 text-zinc-900" : "bg-blue-600 text-white"}`}
+                className={`max-w-[80%] rounded-2xl px-4 py-3 text-sm leading-6 break-words whitespace-pre-wrap ${msg.isBot ? "bg-zinc-50 text-zinc-900" : "bg-blue-600 text-white"}`}
                 dangerouslySetInnerHTML={{ __html: msg.text }}
               />
             </div>
@@ -482,7 +538,7 @@ export default function Home() {
         {/* Input & actions - removed shadows and backdrop blur */}
         <div className="fixed bottom-0 left-0 right-0 z-50 md:pl-72">
           <div className="max-w-3xl mx-auto px-4 sm:px-6 py-3">
-            <div className="rounded-2xl border border-black/5 p-3 sm:p-4 bg-white">
+            <div className="p-3 sm:p-4">
               {uploadedFiles.length > 0 && (
                 <div className="mb-3 flex flex-wrap gap-2">
                   {uploadedFiles.map((f, i) => (
@@ -494,30 +550,55 @@ export default function Home() {
                 </div>
               )}
 
-              <div className="flex items-center gap-2">
-                <input
-                  type="text"
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                <textarea
+                  ref={textAreaRef}
                   value={inputText}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setInputText(e.target.value)}
-                  onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => { if (e.key === "Enter") handleQuery(); }}
+                  onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setInputText(e.target.value)}
+                  onKeyDown={(e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+                    // On desktop: Enter sends; On mobile: Enter inserts newline
+                    if (!isMobile && e.key === "Enter" && !e.shiftKey) {
+                      e.preventDefault();
+                      handleQuery();
+                    }
+                  }}
                   placeholder="Type your question..."
-                  className="flex-1 h-11 rounded-xl px-3 border border-black/5 bg-background text-foreground placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="flex-1 min-w-0 w-full h-auto min-h-[2.75rem] rounded-xl px-3 py-2 border border-black/5 bg-background text-foreground placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none overflow-hidden"
                   disabled={isLoading}
+                  rows={1}
+                  style={{ height: `${inputHeight}px` }}
+                  onInput={(e: React.FormEvent<HTMLTextAreaElement>) => {
+                    const el = e.currentTarget;
+                    el.style.height = "auto";
+                    const next = isMobile ? el.scrollHeight : Math.min(el.scrollHeight, 160);
+                    setInputHeight(next);
+                  }}
                 />
-                <button onClick={handleQuery} disabled={isLoading} className="h-11 px-4 rounded-xl bg-blue-500 hover:bg-blue-600 focus:ring-2 focus:ring-blue-500 text-white text-sm font-medium disabled:opacity-50 inline-flex items-center gap-2">
-                  <Send size={18} />
-                  <ShinyText text="Send" speed={4} variant="onBlue" />
-                </button>
-                <label className="h-11 px-3 rounded-xl bg-zinc-50 hover:bg-zinc-100 border border-zinc-200 text-sm text-zinc-900 cursor-pointer inline-flex items-center gap-2">
-                  <Upload size={18} />
-                  <span>Upload</span>
-                  <input type="file" multiple accept=".pdf,image/*" className="hidden" onChange={(e: React.ChangeEvent<HTMLInputElement>) => { const files = Array.from(e.target.files || []); setUploadedFiles((prev) => [...prev, ...files]); }} />
-                </label>
+                <div className="flex items-center gap-2 justify-end sm:justify-start">
+                  <button onClick={handleQuery} disabled={isLoading} className="h-11 px-4 rounded-xl bg-blue-500 hover:bg-blue-600 focus:ring-2 focus:ring-blue-500 text-white text-sm font-medium disabled:opacity-50 inline-flex items-center gap-2 shrink-0 whitespace-nowrap">
+                    <Send size={18} />
+                    <span className="hidden sm:inline">
+                      <ShinyText text="Send" speed={4} variant="onBlue" />
+                    </span>
+                  </button>
+                  <label className="h-11 px-3 rounded-xl bg-zinc-50 hover:bg-zinc-100 border border-zinc-200 text-sm text-zinc-900 cursor-pointer inline-flex items-center gap-2 shrink-0 whitespace-nowrap">
+                    <Upload size={18} />
+                    <span className="hidden sm:inline">Upload</span>
+                    <input type="file" multiple accept=".pdf,image/*" className="hidden" onChange={(e: React.ChangeEvent<HTMLInputElement>) => { const files = Array.from(e.target.files || []); setUploadedFiles((prev) => [...prev, ...files]); }} />
+                  </label>
+                </div>
               </div>
             </div>
           </div>
         </div>
       </main>
+    </div>
+  ) : (
+    <div className="min-h-screen bg-background text-foreground flex items-center justify-center">
+      <div className="flex items-center gap-2 text-sm text-zinc-600">
+        <Loader2 className="animate-spin" size={16} />
+        <span>Redirecting to login…</span>
+      </div>
     </div>
   );
 }
