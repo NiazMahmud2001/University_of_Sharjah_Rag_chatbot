@@ -10,6 +10,26 @@ import { useRouter } from "next/navigation";
 
 type Message = { text: string; isBot: boolean };
 
+// Clears profile cache on Supabase sign-out to avoid stale data
+function useAuthCacheCleanup() {
+  useEffect(() => {
+    const supabase = createSupabaseClient();
+    const { data: listener } = supabase.auth.onAuthStateChange((event) => {
+      if (event === 'SIGNED_OUT') {
+        try {
+          Object.keys(localStorage).forEach((key) => {
+            if (key.startsWith('nexly:profile:')) localStorage.removeItem(key);
+          });
+        } catch {}
+      }
+    });
+    return () => {
+      try { listener?.subscription?.unsubscribe?.(); } catch {}
+    };
+  }, []);
+}
+
+
 function truncateFileName(filename: string, maxLength = 10) {
   const dotIndex = filename.lastIndexOf(".");
   let namePart = filename;
@@ -67,6 +87,9 @@ export default function Home() {
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [profileOpen, setProfileOpen] = useState(false);
+
+  useAuthCacheCleanup();
 
   useEffect(() => {
     // Protect route: redirect to /login when not authenticated
@@ -395,7 +418,7 @@ export default function Home() {
         </div>
         <div className="mt-auto pt-3 border-t border-black/10">
           <button
-            onClick={() => router.push('/profile')}
+            onClick={() => setProfileOpen(true)}
             className="w-full h-10 px-3 rounded-xl border border-black/10 hover:bg-zinc-100 text-sm font-medium"
           >
             Profile
@@ -493,7 +516,7 @@ export default function Home() {
             </div>
             <div className="mt-auto pt-3 border-t border-black/10">
               <button
-                onClick={() => router.push('/profile')}
+                onClick={() => setProfileOpen(true)}
                 className="w-full h-10 px-3 rounded-xl border border-black/10 hover:bg-zinc-100 text-sm font-medium"
               >
                 Profile
@@ -536,7 +559,7 @@ export default function Home() {
         </div>
 
         {/* Input & actions - removed shadows and backdrop blur */}
-        <div className="fixed bottom-0 left-0 right-0 z-50 md:pl-72">
+        <div className="fixed bottom-0 left-0 right-0 md:left-72 z-30">
           <div className="max-w-3xl mx-auto px-4 sm:px-6 py-3">
             <div className="p-3 sm:p-4">
               {uploadedFiles.length > 0 && (
@@ -591,6 +614,7 @@ export default function Home() {
             </div>
           </div>
         </div>
+      {profileOpen && <ProfileDialog onClose={() => setProfileOpen(false)} />}
       </main>
     </div>
   ) : (
@@ -598,6 +622,201 @@ export default function Home() {
       <div className="flex items-center gap-2 text-sm text-zinc-600">
         <Loader2 className="animate-spin" size={16} />
         <span>Redirecting to login…</span>
+      </div>
+    </div>
+  );
+}
+
+
+function ProfileDialog({ onClose }: { onClose: () => void }) {
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [student, setStudent] = useState<any | null>(null);
+
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const supabase = createSupabaseClient();
+        const { data: userData } = await supabase.auth.getUser();
+        const user = userData?.user;
+        if (!user) {
+          if (mounted) {
+            setError("Not signed in");
+            setLoading(false);
+          }
+          return;
+        }
+        const cacheKey = `nexly:profile:${user.id}`;
+        const cachedRaw = typeof window !== 'undefined' ? localStorage.getItem(cacheKey) : null;
+        if (cachedRaw) {
+          try {
+            const cached = JSON.parse(cachedRaw);
+            if (mounted) {
+              setStudent(cached);
+              setLoading(false);
+            }
+          } catch {}
+        }
+        const { data, error } = await supabase
+          .from("students")
+          .select(
+            "id,name,email,bod,current_year,semester,college,department,degree,completed_courses,uid"
+          )
+          .eq("id", user.id)
+          .maybeSingle();
+        if (!mounted) return;
+        if (error) {
+          // If we already showed cached data, keep it and avoid erroring UI
+          if (!cachedRaw) {
+            setError(error.message);
+            setLoading(false);
+          }
+        } else if (data) {
+          try {
+            localStorage.setItem(cacheKey, JSON.stringify(data));
+          } catch {}
+          setStudent(data);
+          setLoading(false);
+        }
+      } catch (e: any) {
+        if (mounted) {
+          setError(e?.message || "Failed to load profile");
+          setLoading(false);
+        }
+      }
+    })();
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  const Field = ({ label, value }: { label: string; value: string }) => (
+    <div>
+      <div className="text-xs text-zinc-500 mb-1">{label}</div>
+      <div className="rounded-xl border border-black/10 bg-background px-3 py-2 text-sm">
+        {value || "—"}
+      </div>
+    </div>
+  );
+
+  const dob = student?.bod ? (() => {
+    const d = new Date(student.bod);
+    return isNaN(d.getTime()) ? "—" : d.toLocaleDateString();
+  })() : "—";
+
+  return (
+    <div className="fixed inset-0 z-50">
+      <div className="absolute inset-0 bg-black/40" onClick={onClose} />
+      <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[92%] max-w-xl">
+        <div className="relative rounded-2xl border border-black/10 bg-white shadow-xl p-6 pt-12 min-h-[520px]">
+          <button
+            aria-label="Close profile dialog"
+            onClick={onClose}
+            className="absolute right-3 top-3 inline-flex items-center justify-center w-9 h-9 rounded-full border border-black/10 hover:bg-zinc-100"
+          >
+            <X size={18} />
+          </button>
+
+          <div className="absolute -top-10 left-1/2 -translate-x-1/2">
+            <div className="w-20 h-20 rounded-full border-4 border-white shadow-md overflow-hidden bg-white">
+              <Image src="/b.svg" alt="Profile" width={80} height={80} className="w-full h-full object-contain p-1" />
+            </div>
+          </div>
+
+          {loading ? (
+            <div className="animate-pulse">
+              <div className="h-5 w-40 bg-zinc-200 rounded mb-4" />
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <div className="h-3 w-20 bg-zinc-200 rounded mb-2" />
+                  <div className="h-9 bg-zinc-200 rounded" />
+                </div>
+                <div>
+                  <div className="h-3 w-28 bg-zinc-200 rounded mb-2" />
+                  <div className="h-9 bg-zinc-200 rounded" />
+                </div>
+                <div>
+                  <div className="h-3 w-24 bg-zinc-200 rounded mb-2" />
+                  <div className="h-9 bg-zinc-200 rounded" />
+                </div>
+                <div>
+                  <div className="h-3 w-28 bg-zinc-200 rounded mb-2" />
+                  <div className="h-9 bg-zinc-200 rounded" />
+                </div>
+                <div>
+                  <div className="h-3 w-24 bg-zinc-200 rounded mb-2" />
+                  <div className="h-9 bg-zinc-200 rounded" />
+                </div>
+                <div>
+                  <div className="h-3 w-28 bg-zinc-200 rounded mb-2" />
+                  <div className="h-9 bg-zinc-200 rounded" />
+                </div>
+                <div>
+                  <div className="h-3 w-20 bg-zinc-200 rounded mb-2" />
+                  <div className="h-9 bg-zinc-200 rounded" />
+                </div>
+                <div>
+                  <div className="h-3 w-16 bg-zinc-200 rounded mb-2" />
+                  <div className="h-9 bg-zinc-200 rounded" />
+                </div>
+              </div>
+              <div className="mt-4">
+                <div className="h-4 w-36 bg-zinc-200 rounded mb-2" />
+                <div className="space-y-2">
+                  <div className="h-8 bg-zinc-200 rounded" />
+                  <div className="h-8 bg-zinc-200 rounded" />
+                  <div className="h-8 bg-zinc-200 rounded" />
+                </div>
+              </div>
+              <div className="mt-6 flex items-center justify-end">
+                <div className="h-10 w-24 bg-zinc-200 rounded" />
+              </div>
+            </div>
+          ) : error ? (
+            <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+              {error}
+            </div>
+          ) : student ? (
+            <div>
+              <h2 className="text-lg font-semibold mb-2">{student.name || "Student"}</h2>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <Field label="Email" value={student.email} />
+                <Field label="Date of Birth" value={dob} />
+                <Field label="College" value={student.college} />
+                <Field label="Department" value={student.department} />
+                <Field label="Degree" value={student.degree} />
+                <Field label="Current Year" value={String(student.current_year ?? "—")} />
+                <Field label="Semester" value={String(student.semester ?? "—")} />
+                <Field label="UID" value={student.uid} />
+              </div>
+
+              <div className="mt-4">
+                <h3 className="text-sm font-medium mb-2">Completed Courses</h3>
+                {Array.isArray(student.completed_courses) && student.completed_courses.length ? (
+                  <ul className="space-y-1 text-sm">
+                    {student.completed_courses.map((c: string, i: number) => (
+                      <li key={i} className="rounded-md border border-black/10 bg-background px-3 py-2">
+                        {c}
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="text-sm text-zinc-500">No courses recorded yet.</p>
+                )}
+              </div>
+
+              <div className="mt-6 flex items-center justify-end">
+                <button
+                  onClick={onClose}
+                  className="h-10 px-4 rounded-xl border border-black/10 bg-background hover:bg-zinc-100 text-sm"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          ) : null}
+        </div>
       </div>
     </div>
   );
