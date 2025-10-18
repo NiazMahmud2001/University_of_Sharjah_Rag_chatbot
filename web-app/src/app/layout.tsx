@@ -15,6 +15,10 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "NEXLY",
   description: "Simple, clean & fast RAG chatbot",
+  icons: {
+    icon: "/b.svg",
+    shortcut: "/b.svg",
+  },
 };
 
 export default function RootLayout({

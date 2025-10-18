@@ -1,12 +1,34 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import Image from "next/image";
-import SplitText from "./components/SplitText";
+import Loader from "./components/Loader";
 import ShinyText from "../components/ShinyText";
 import { Send, Upload, Plus, Trash2, Pencil, Menu, X, Check, Loader2 } from "lucide-react";
+import { createClient as createSupabaseClient } from "@/utils/supabase/browser";
+import { useRouter } from "next/navigation";
 
 type Message = { text: string; isBot: boolean };
+
+// Clears profile cache on Supabase sign-out to avoid stale data
+function useAuthCacheCleanup() {
+  useEffect(() => {
+    const supabase = createSupabaseClient();
+    const { data: listener } = supabase.auth.onAuthStateChange((event) => {
+      if (event === 'SIGNED_OUT') {
+        try {
+          Object.keys(localStorage).forEach((key) => {
+            if (key.startsWith('nexly:profile:')) localStorage.removeItem(key);
+          });
+        } catch {}
+      }
+    });
+    return () => {
+      try { listener?.subscription?.unsubscribe?.(); } catch {}
+    };
+  }, []);
+}
+
 
 function truncateFileName(filename: string, maxLength = 10) {
   const dotIndex = filename.lastIndexOf(".");
@@ -23,11 +45,19 @@ function truncateFileName(filename: string, maxLength = 10) {
 }
 
 export default function Home() {
+  const router = useRouter();
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputText, setInputText] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
   const [showSplash, setShowSplash] = useState(true);
+  const [authChecked, setAuthChecked] = useState(false);
+  // Auto-resize textarea for multi-line input
+  const textAreaRef = useRef<HTMLTextAreaElement>(null);
+  // Track mobile viewport to change Enter behavior
+  const [isMobile, setIsMobile] = useState(false);
+  // Track textarea height to ensure reliable visual growth on phones
+  const [inputHeight, setInputHeight] = useState<number>(44);
   // Add chat session type and local persistence helpers
   type ChatSession = {
     id: string;
@@ -57,9 +87,31 @@ export default function Home() {
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [profileOpen, setProfileOpen] = useState(false);
+
+  useAuthCacheCleanup();
 
   useEffect(() => {
-    // load chat sessions from localStorage/cookie
+    // Protect route: redirect to /login when not authenticated
+    (async () => {
+      try {
+        const supabase = createSupabaseClient();
+        const { data } = await supabase.auth.getUser();
+        if (!data?.user) {
+          router.replace("/login");
+          return;
+        }
+        setAuthChecked(true);
+      } catch {
+        router.replace("/login");
+      }
+    })();
+  }, [router]);
+
+
+  useEffect(() => {
+    // initialize chat sessions only after auth is checked
+    if (!authChecked) return;
     const raw = localStorage.getItem(STORAGE_KEY_CHATS);
     if (raw) {
       try {
@@ -89,19 +141,37 @@ export default function Home() {
       setMessages([]);
       setCookie(COOKIE_ACTIVE, id);
     }
-  }, []);
+  }, [authChecked]);
 
   // persist sessions and active id
   useEffect(() => {
+    if (!authChecked) return;
     if (sessions.length) {
       localStorage.setItem(STORAGE_KEY_CHATS, JSON.stringify(sessions));
     }
     if (activeSessionId) setCookie(COOKIE_ACTIVE, activeSessionId);
-  }, [sessions, activeSessionId]);
+  }, [sessions, activeSessionId, authChecked]);
 
   useEffect(() => {
     const t = setTimeout(() => setShowSplash(false), 2000);
     return () => clearTimeout(t);
+  }, []);
+
+  // Recompute textarea height on input changes
+  useEffect(() => {
+    const el = textAreaRef.current;
+    if (!el) return;
+    el.style.height = "auto";
+    const next = isMobile ? el.scrollHeight : Math.min(el.scrollHeight, 160); // uncap on phones
+    setInputHeight(next);
+  }, [inputText, isMobile]);
+
+  // Determine if viewport is mobile (sm breakpoint)
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 640);
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
   }, []);
 
   const removeFile = (index: number) => {
@@ -249,24 +319,14 @@ export default function Home() {
     return (
       <div className="min-h-screen bg-background text-foreground flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
-          <Image src="/modelLogo_with_text.png" alt="NEXLY Logo" width={220} height={60} priority className="h-14 w-auto" />
-          <SplitText
-            text="NEXLY"
-            tag="h2"
-            className="text-2xl sm:text-3xl font-semibold tracking-wide"
-            splitType="chars"
-            delay={80}
-            duration={0.5}
-            from={{ opacity: 0, y: 24 }}
-            to={{ opacity: 1, y: 0 }}
-          />
+          <Loader />
         </div>
       </div>
     );
   }
 
-  return (
-    <div className="min-h-screen bg-background text-foreground font-sans md:pl-72">
+  return authChecked ? (
+    <div className="min-h-screen bg-background text-foreground font-sans md:pl-72 overflow-x-hidden">
       {/* Desktop Sidebar */}
       <aside className={"hidden md:flex fixed left-0 top-0 bottom-0 w-72 flex-col p-4 z-40 border-r bg-white text-zinc-900 border-black/10"}>
         <button onClick={newChat} className="mt-3 h-10 px-3 rounded-xl bg-blue-500 hover:bg-blue-600 text-white text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 inline-flex items-center gap-2">
@@ -346,8 +406,14 @@ export default function Home() {
             ))}
           </ul>
         </div>
-        <div className={`mt-auto pt-3 border-t border-black/10`}>
-          <div className={`text-xs text-zinc-500`}>nexly 2.0 version</div>
+        <div className="mt-auto pt-3 border-t border-black/10">
+          <button
+            onClick={() => setProfileOpen(true)}
+            className="w-full h-10 px-3 rounded-xl border border-black/10 hover:bg-zinc-100 text-sm font-medium"
+          >
+            Profile
+          </button>
+          <div className="mt-2 text-xs text-zinc-500">nexly 2.0 version</div>
         </div>
       </aside>
 
@@ -355,7 +421,7 @@ export default function Home() {
       {sidebarOpen && (
         <div className="fixed inset-0 z-50 md:hidden">
           <div className="absolute inset-0 bg-black/40" onClick={() => setSidebarOpen(false)} />
-          <aside className={`absolute left-0 top-0 h-full w-72 p-4 border-r bg-white text-zinc-900 border-black/10`}>
+          <aside className={`absolute left-0 top-0 h-full w-72 p-4 border-r bg-white text-zinc-900 border-black/10 flex flex-col`}>
             <div className="flex items-center justify-end">
               <button onClick={() => setSidebarOpen(false)} className="inline-flex items-center justify-center w-9 h-9 rounded-full border border-black/10" aria-label="Close sidebar">
                 <X size={18} />
@@ -438,33 +504,36 @@ export default function Home() {
                 ))}
               </ul>
             </div>
-            <div className={`mt-auto pt-3 border-t border-black/10`}>
-              <div className={`text-xs text-zinc-500`}>nexly 2.0 version</div>
+            <div className="mt-auto pt-3 border-t border-black/10">
+              <button
+                onClick={() => setProfileOpen(true)}
+                className="w-full h-10 px-3 rounded-xl border border-black/10 hover:bg-zinc-100 text-sm font-medium"
+              >
+                Profile
+              </button>
+              <div className="mt-2 text-xs text-zinc-500">nexly 2.0 version</div>
             </div>
           </aside>
         </div>
       )}
 
       <main className="max-w-3xl mx-auto px-4 sm:px-6 py-8 flex flex-col gap-6">
-        <header className="flex items-center justify-between">
+        <header className="flex items-center justify-start">
           <div className="flex items-center gap-3">
             <button className="md:hidden inline-flex items-center justify-center w-9 h-9 rounded-full border border-black/10" onClick={() => setSidebarOpen(true)} aria-label="Open sidebar">
               <Menu size={20} />
             </button>
-            <Image src="/modelLogo_with_text.png" alt="NEXLY Logo" width={128} height={32} className="h-8 w-auto" />
-          </div>
-          <div className="flex items-center gap-3">
-            <div className="text-xs sm:text-sm opacity-70">Your New AI-Powered Advisor</div>
-            <Image src="/uosSvgForWhiteTheme.svg" alt="UOS icon" width={22} height={22} className="opacity-80" />
+            <Image src="/b.svg" alt="NEXLY Logo" width={80} height={40} className="h-8 w-auto sm:h-12" />
+            <Image src="/uosSvgForWhiteTheme.svg" alt="UOS icon" width={80} height={60} className="h-10 w-auto sm:h-14" />
           </div>
         </header>
 
         {/* Chat messages - removed shadows */}
-        <div className="flex-1 min-h-[50vh] p-4 sm:p-5 pb-28 overflow-y-auto chat-scroll">
+        <div className="flex-1 min-h-[50vh] p-4 sm:p-5 pb-28 overflow-y-auto overflow-x-hidden chat-scroll">
           {messages.map((msg, idx) => (
             <div key={idx} className={`mb-3 flex ${msg.isBot ? "justify-start" : "justify-end"}`}>
               <div
-                className={`max-w-[80%] rounded-2xl px-4 py-3 text-sm leading-6 ${msg.isBot ? "bg-zinc-50 text-zinc-900" : "bg-blue-600 text-white"}`}
+                className={`max-w-[80%] rounded-2xl px-4 py-3 text-sm leading-6 break-words whitespace-pre-wrap ${msg.isBot ? "bg-zinc-50 text-zinc-900" : "bg-blue-600 text-white"}`}
                 dangerouslySetInnerHTML={{ __html: msg.text }}
               />
             </div>
@@ -480,9 +549,9 @@ export default function Home() {
         </div>
 
         {/* Input & actions - removed shadows and backdrop blur */}
-        <div className="fixed bottom-0 left-0 right-0 z-50 md:pl-72">
+        <div className="fixed bottom-0 left-0 right-0 md:left-72 z-30">
           <div className="max-w-3xl mx-auto px-4 sm:px-6 py-3">
-            <div className="rounded-2xl border border-black/5 p-3 sm:p-4 bg-white">
+            <div className="p-3 sm:p-4">
               {uploadedFiles.length > 0 && (
                 <div className="mb-3 flex flex-wrap gap-2">
                   {uploadedFiles.map((f, i) => (
@@ -494,30 +563,251 @@ export default function Home() {
                 </div>
               )}
 
-              <div className="flex items-center gap-2">
-                <input
-                  type="text"
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                <textarea
+                  ref={textAreaRef}
                   value={inputText}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setInputText(e.target.value)}
-                  onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => { if (e.key === "Enter") handleQuery(); }}
+                  onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setInputText(e.target.value)}
+                  onKeyDown={(e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+                    // On desktop: Enter sends; On mobile: Enter inserts newline
+                    if (!isMobile && e.key === "Enter" && !e.shiftKey) {
+                      e.preventDefault();
+                      handleQuery();
+                    }
+                  }}
                   placeholder="Type your question..."
-                  className="flex-1 h-11 rounded-xl px-3 border border-black/5 bg-background text-foreground placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="flex-1 min-w-0 w-full h-auto min-h-[2.75rem] rounded-xl px-3 py-2 border border-black/5 bg-background text-foreground placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none overflow-hidden"
                   disabled={isLoading}
+                  rows={1}
+                  style={{ height: `${inputHeight}px` }}
+                  onInput={(e: React.FormEvent<HTMLTextAreaElement>) => {
+                    const el = e.currentTarget;
+                    el.style.height = "auto";
+                    const next = isMobile ? el.scrollHeight : Math.min(el.scrollHeight, 160);
+                    setInputHeight(next);
+                  }}
                 />
-                <button onClick={handleQuery} disabled={isLoading} className="h-11 px-4 rounded-xl bg-blue-500 hover:bg-blue-600 focus:ring-2 focus:ring-blue-500 text-white text-sm font-medium disabled:opacity-50 inline-flex items-center gap-2">
-                  <Send size={18} />
-                  <ShinyText text="Send" speed={4} variant="onBlue" />
-                </button>
-                <label className="h-11 px-3 rounded-xl bg-zinc-50 hover:bg-zinc-100 border border-zinc-200 text-sm text-zinc-900 cursor-pointer inline-flex items-center gap-2">
-                  <Upload size={18} />
-                  <span>Upload</span>
-                  <input type="file" multiple accept=".pdf,image/*" className="hidden" onChange={(e: React.ChangeEvent<HTMLInputElement>) => { const files = Array.from(e.target.files || []); setUploadedFiles((prev) => [...prev, ...files]); }} />
-                </label>
+                <div className="flex items-center gap-2 justify-end sm:justify-start">
+                  <button onClick={handleQuery} disabled={isLoading} className="h-11 px-4 rounded-xl bg-blue-500 hover:bg-blue-600 focus:ring-2 focus:ring-blue-500 text-white text-sm font-medium disabled:opacity-50 inline-flex items-center gap-2 shrink-0 whitespace-nowrap">
+                    <Send size={18} />
+                    <span className="hidden sm:inline">
+                      <ShinyText text="Send" speed={4} variant="onBlue" />
+                    </span>
+                  </button>
+                  <label className="h-11 px-3 rounded-xl bg-zinc-50 hover:bg-zinc-100 border border-zinc-200 text-sm text-zinc-900 cursor-pointer inline-flex items-center gap-2 shrink-0 whitespace-nowrap">
+                    <Upload size={18} />
+                    <span className="hidden sm:inline">Upload</span>
+                    <input type="file" multiple accept=".pdf,image/*" className="hidden" onChange={(e: React.ChangeEvent<HTMLInputElement>) => { const files = Array.from(e.target.files || []); setUploadedFiles((prev) => [...prev, ...files]); }} />
+                  </label>
+                </div>
               </div>
             </div>
           </div>
         </div>
+      {profileOpen && <ProfileDialog onClose={() => setProfileOpen(false)} />}
       </main>
+    </div>
+  ) : (
+    <div className="min-h-screen bg-background text-foreground flex items-center justify-center">
+      <div className="flex items-center gap-2 text-sm text-zinc-600">
+        <Loader2 className="animate-spin" size={16} />
+        <span>Redirecting to login…</span>
+      </div>
+    </div>
+  );
+}
+
+
+function ProfileDialog({ onClose }: { onClose: () => void }) {
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [student, setStudent] = useState<any | null>(null);
+
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const supabase = createSupabaseClient();
+        const { data: userData } = await supabase.auth.getUser();
+        const user = userData?.user;
+        if (!user) {
+          if (mounted) {
+            setError("Not signed in");
+            setLoading(false);
+          }
+          return;
+        }
+        const cacheKey = `nexly:profile:${user.id}`;
+        const cachedRaw = typeof window !== 'undefined' ? localStorage.getItem(cacheKey) : null;
+        if (cachedRaw) {
+          try {
+            const cached = JSON.parse(cachedRaw);
+            if (mounted) {
+              setStudent(cached);
+              setLoading(false);
+            }
+          } catch {}
+        }
+        const { data, error } = await supabase
+          .from("students")
+          .select(
+            "id,name,email,bod,current_year,semester,college,department,degree,completed_courses,uid"
+          )
+          .eq("id", user.id)
+          .maybeSingle();
+        if (!mounted) return;
+        if (error) {
+          // If we already showed cached data, keep it and avoid erroring UI
+          if (!cachedRaw) {
+            setError(error.message);
+            setLoading(false);
+          }
+        } else if (data) {
+          try {
+            localStorage.setItem(cacheKey, JSON.stringify(data));
+          } catch {}
+          setStudent(data);
+          setLoading(false);
+        }
+      } catch (e: any) {
+        if (mounted) {
+          setError(e?.message || "Failed to load profile");
+          setLoading(false);
+        }
+      }
+    })();
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  const Field = ({ label, value }: { label: string; value: string }) => (
+    <div>
+      <div className="text-xs text-zinc-500 mb-1">{label}</div>
+      <div className="rounded-xl border border-black/10 bg-background px-3 py-2 text-sm">
+        {value || "—"}
+      </div>
+    </div>
+  );
+
+  const dob = student?.bod ? (() => {
+    const d = new Date(student.bod);
+    return isNaN(d.getTime()) ? "—" : d.toLocaleDateString();
+  })() : "—";
+
+  return (
+    <div className="fixed inset-0 z-50">
+      <div className="absolute inset-0 bg-black/40" onClick={onClose} />
+      <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[92%] max-w-xl">
+        <div className="relative rounded-2xl border border-black/10 bg-white shadow-xl p-6 pt-12 min-h-[520px]">
+          <button
+            aria-label="Close profile dialog"
+            onClick={onClose}
+            className="absolute right-3 top-3 inline-flex items-center justify-center w-9 h-9 rounded-full border border-black/10 hover:bg-zinc-100"
+          >
+            <X size={18} />
+          </button>
+
+          <div className="absolute -top-10 left-1/2 -translate-x-1/2">
+            <div className="w-20 h-20 rounded-full border-4 border-white shadow-md overflow-hidden bg-white">
+              <Image src="/b.svg" alt="Profile" width={80} height={80} className="w-full h-full object-contain p-1" />
+            </div>
+          </div>
+
+          {loading ? (
+            <div className="animate-pulse">
+              <div className="h-5 w-40 bg-zinc-200 rounded mb-4" />
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <div className="h-3 w-20 bg-zinc-200 rounded mb-2" />
+                  <div className="h-9 bg-zinc-200 rounded" />
+                </div>
+                <div>
+                  <div className="h-3 w-28 bg-zinc-200 rounded mb-2" />
+                  <div className="h-9 bg-zinc-200 rounded" />
+                </div>
+                <div>
+                  <div className="h-3 w-24 bg-zinc-200 rounded mb-2" />
+                  <div className="h-9 bg-zinc-200 rounded" />
+                </div>
+                <div>
+                  <div className="h-3 w-28 bg-zinc-200 rounded mb-2" />
+                  <div className="h-9 bg-zinc-200 rounded" />
+                </div>
+                <div>
+                  <div className="h-3 w-24 bg-zinc-200 rounded mb-2" />
+                  <div className="h-9 bg-zinc-200 rounded" />
+                </div>
+                <div>
+                  <div className="h-3 w-28 bg-zinc-200 rounded mb-2" />
+                  <div className="h-9 bg-zinc-200 rounded" />
+                </div>
+                <div>
+                  <div className="h-3 w-20 bg-zinc-200 rounded mb-2" />
+                  <div className="h-9 bg-zinc-200 rounded" />
+                </div>
+                <div>
+                  <div className="h-3 w-16 bg-zinc-200 rounded mb-2" />
+                  <div className="h-9 bg-zinc-200 rounded" />
+                </div>
+              </div>
+              <div className="mt-4">
+                <div className="h-4 w-36 bg-zinc-200 rounded mb-2" />
+                <div className="space-y-2">
+                  <div className="h-8 bg-zinc-200 rounded" />
+                  <div className="h-8 bg-zinc-200 rounded" />
+                  <div className="h-8 bg-zinc-200 rounded" />
+                </div>
+              </div>
+              <div className="mt-6 flex items-center justify-end">
+                <div className="h-10 w-24 bg-zinc-200 rounded" />
+              </div>
+            </div>
+          ) : error ? (
+            <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+              {error}
+            </div>
+          ) : student ? (
+            <div>
+              <h2 className="text-lg font-semibold mb-2">{student.name || "Student"}</h2>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <Field label="Email" value={student.email} />
+                <Field label="Date of Birth" value={dob} />
+                <Field label="College" value={student.college} />
+                <Field label="Department" value={student.department} />
+                <Field label="Degree" value={student.degree} />
+                <Field label="Current Year" value={String(student.current_year ?? "—")} />
+                <Field label="Semester" value={String(student.semester ?? "—")} />
+                <Field label="UID" value={student.uid} />
+              </div>
+
+              <div className="mt-4">
+                <h3 className="text-sm font-medium mb-2">Completed Courses</h3>
+                {Array.isArray(student.completed_courses) && student.completed_courses.length ? (
+                  <ul className="space-y-1 text-sm">
+                    {student.completed_courses.map((c: string, i: number) => (
+                      <li key={i} className="rounded-md border border-black/10 bg-background px-3 py-2">
+                        {c}
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="text-sm text-zinc-500">No courses recorded yet.</p>
+                )}
+              </div>
+
+              <div className="mt-6 flex items-center justify-end">
+                <button
+                  onClick={onClose}
+                  className="h-10 px-4 rounded-xl border border-black/10 bg-background hover:bg-zinc-100 text-sm"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          ) : null}
+        </div>
+      </div>
     </div>
   );
 }
