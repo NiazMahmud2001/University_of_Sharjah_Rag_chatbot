@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState, useRef } from "react";
 import Image from "next/image";
-import SplitText from "./components/SplitText";
+import Loader from "./components/Loader";
 import ShinyText from "../components/ShinyText";
 import { Send, Upload, Plus, Trash2, Pencil, Menu, X, Check, Loader2 } from "lucide-react";
 import { createClient as createSupabaseClient } from "@/utils/supabase/browser";
@@ -319,17 +319,7 @@ export default function Home() {
     return (
       <div className="min-h-screen bg-background text-foreground flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
-          <Image src="/b.svg" alt="NEXLY Logo" width={110} height={110} priority className="h-20 w-auto" />
-          <SplitText
-            text="NEXLY"
-            tag="h2"
-            className="text-2xl sm:text-3xl font-semibold tracking-wide"
-            splitType="chars"
-            delay={80}
-            duration={0.5}
-            from={{ opacity: 0, y: 24 }}
-            to={{ opacity: 1, y: 0 }}
-          />
+          <Loader />
         </div>
       </div>
     );
