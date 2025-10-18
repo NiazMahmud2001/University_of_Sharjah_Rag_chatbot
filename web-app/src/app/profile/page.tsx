@@ -43,6 +43,22 @@ export default function ProfilePage() {
         return;
       }
 
+      // Try to serve cached profile immediately
+      const cacheKey = `nexly:profile:${user.id}`;
+      let cachedRaw: string | null = null;
+      try {
+        cachedRaw = typeof window !== "undefined" ? localStorage.getItem(cacheKey) : null;
+      } catch {}
+      if (cachedRaw) {
+        try {
+          const cached: Student = JSON.parse(cachedRaw);
+          if (mounted) {
+            setStudent(cached);
+            setLoading(false);
+          }
+        } catch {}
+      }
+
       const { data, error } = await supabase
         .from("students")
         .select("id,name,email,bod,current_year,semester,college,department,degree,completed_courses,uid")
@@ -51,11 +67,19 @@ export default function ProfilePage() {
 
       if (!mounted) return;
       if (error) {
-        setError(error.message);
+        // Only show error if we didn't already serve cached data
+        if (!cachedRaw) {
+          setError(error.message);
+          setLoading(false);
+        }
       } else {
+        // Update UI and cache with fresh data
         setStudent(data as Student | null);
+        try {
+          localStorage.setItem(cacheKey, JSON.stringify(data));
+        } catch {}
+        setLoading(false);
       }
-      setLoading(false);
     }
     fetchProfile();
     return () => {
@@ -152,6 +176,12 @@ export default function ProfilePage() {
               } catch {
                 // ignore, we will still route to login
               } finally {
+                try {
+                  // Clear cached profile keys
+                  Object.keys(localStorage).forEach((k) => {
+                    if (k.startsWith("nexly:profile:")) localStorage.removeItem(k);
+                  });
+                } catch {}
                 router.replace("/login");
               }
             }}
