@@ -4,7 +4,7 @@ import React, { useEffect, useState, useRef } from "react";
 import Image from "next/image";
 import Loader from "./components/Loader";
 import ShinyText from "../components/ShinyText";
-import { Send, Upload, Plus, Trash2, Pencil, Menu, X, Check, Loader2 } from "lucide-react";
+import { Send, Upload, Plus, Trash2, Pencil, Menu, X, Check, Loader2, LogOut } from "lucide-react";
 import { createClient as createSupabaseClient } from "@/utils/supabase/browser";
 import { useRouter } from "next/navigation";
 
@@ -88,6 +88,7 @@ export default function Home() {
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
+  const [sidebarStudent, setSidebarStudent] = useState<any | null>(null);
 
   useAuthCacheCleanup();
 
@@ -108,6 +109,36 @@ export default function Home() {
     })();
   }, [router]);
 
+  // Preload cached student profile for sidebar display
+  useEffect(() => {
+    if (!authChecked) return;
+    (async () => {
+      try {
+        const supabase = createSupabaseClient();
+        const { data: userData } = await supabase.auth.getUser();
+        const user = userData?.user;
+        if (!user) return;
+        const cacheKey = `nexly:profile:${user.id}`;
+        const cachedRaw = typeof window !== 'undefined' ? localStorage.getItem(cacheKey) : null;
+        if (cachedRaw) {
+          try {
+            const cached = JSON.parse(cachedRaw);
+            setSidebarStudent(cached);
+            return;
+          } catch {}
+        }
+        const { data, error } = await supabase
+          .from("students")
+          .select("id,name,uid")
+          .eq("id", user.id)
+          .maybeSingle();
+        if (!error && data) {
+          try { localStorage.setItem(cacheKey, JSON.stringify(data)); } catch {}
+          setSidebarStudent(data);
+        }
+      } catch {}
+    })();
+  }, [authChecked]);
 
   useEffect(() => {
     // initialize chat sessions only after auth is checked
@@ -409,11 +440,18 @@ export default function Home() {
         <div className="mt-auto pt-3 border-t border-black/10">
           <button
             onClick={() => setProfileOpen(true)}
-            className="w-full h-10 px-3 rounded-xl border border-black/10 hover:bg-zinc-100 text-sm font-medium"
+            className="w-full p-3 rounded-xl border border-black/10 hover:bg-zinc-100 text-left flex items-center gap-3"
+            aria-label="Open profile"
           >
-            Profile
+            <div className="relative w-9 h-9 rounded-full overflow-hidden border border-black/10 bg-zinc-50 flex items-center justify-center">
+              <Image src="/w.svg" alt="NEXLY" width={20} height={20} className="w-5 h-5" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="text-sm font-medium text-zinc-900 truncate">{sidebarStudent?.name || "Loading…"}</div>
+              <div className="text-xs text-zinc-500 truncate">{sidebarStudent?.uid || sidebarStudent?.id || ""}</div>
+            </div>
           </button>
-          <div className="mt-2 text-xs text-zinc-500">nexly 2.0 version</div>
+          <div className="mt-2 mb-3 text-xs text-zinc-500 text-center">nexly 2.0 version</div>
         </div>
       </aside>
 
@@ -507,11 +545,18 @@ export default function Home() {
             <div className="mt-auto pt-3 border-t border-black/10">
               <button
                 onClick={() => setProfileOpen(true)}
-                className="w-full h-10 px-3 rounded-xl border border-black/10 hover:bg-zinc-100 text-sm font-medium"
+                className="w-full p-3 rounded-xl border border-black/10 hover:bg-zinc-100 text-left flex items-center gap-3"
+                aria-label="Open profile"
               >
-                Profile
+                <div className="relative w-9 h-9 rounded-full overflow-hidden border border-black/10 bg-zinc-50 flex items-center justify-center">
+                  <Image src="/w.svg" alt="NEXLY" width={20} height={20} className="w-5 h-5" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm font-medium text-zinc-900 truncate">{sidebarStudent?.name || "Loading…"}</div>
+                  <div className="text-xs text-zinc-500 truncate">{sidebarStudent?.uid || sidebarStudent?.id || ""}</div>
+                </div>
               </button>
-              <div className="mt-2 text-xs text-zinc-500">nexly 2.0 version</div>
+              <div className="mt-2 mb-3 text-xs text-zinc-500 text-center">nexly 2.0 version</div>
             </div>
           </aside>
         </div>
@@ -622,6 +667,8 @@ function ProfileDialog({ onClose }: { onClose: () => void }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [student, setStudent] = useState<any | null>(null);
+  const [signingOut, setSigningOut] = useState(false);
+  const router = useRouter();
 
   useEffect(() => {
     let mounted = true;
@@ -694,6 +741,20 @@ function ProfileDialog({ onClose }: { onClose: () => void }) {
     const d = new Date(student.bod);
     return isNaN(d.getTime()) ? "—" : d.toLocaleDateString();
   })() : "—";
+
+  const handleSignOut = async () => {
+    try {
+      setSigningOut(true);
+      const supabase = createSupabaseClient();
+      await supabase.auth.signOut();
+      router.replace("/login");
+    } catch {
+      // no-op
+    } finally {
+      setSigningOut(false);
+      onClose();
+    }
+  };
 
   return (
     <div className="fixed inset-0 z-50">
@@ -796,12 +857,21 @@ function ProfileDialog({ onClose }: { onClose: () => void }) {
                 )}
               </div>
 
-              <div className="mt-6 flex items-center justify-end">
+              <div className="mt-6 flex items-center justify-end gap-2">
+                <button
+                  onClick={handleSignOut}
+                  disabled={signingOut}
+                  className="inline-flex items-center gap-2 h-10 px-4 rounded-xl border border-red-200 bg-red-50 hover:bg-red-100 text-sm text-red-700 disabled:opacity-50"
+                >
+                  <LogOut size={16} />
+                  <span>Sign Out</span>
+                </button>
                 <button
                   onClick={onClose}
-                  className="h-10 px-4 rounded-xl border border-black/10 bg-background hover:bg-zinc-100 text-sm"
+                  className="inline-flex items-center gap-2 h-10 px-4 rounded-xl border border-black/10 bg-background hover:bg-zinc-100 text-sm"
                 >
-                  Close
+                  <X size={16} />
+                  <span>Close</span>
                 </button>
               </div>
             </div>
