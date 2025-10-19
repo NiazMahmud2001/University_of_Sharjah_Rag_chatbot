@@ -4,7 +4,7 @@ import React, { useEffect, useState, useRef } from "react";
 import Image from "next/image";
 import Loader from "./components/Loader";
 import ShinyText from "../components/ShinyText";
-import { Send, Upload, Plus, Trash2, Pencil, Menu, X, Check, Loader2, LogOut } from "lucide-react";
+import { Send, Upload, Plus, Trash2, Pencil, Menu, X, Check, Loader2, LogOut, GraduationCap, Search } from "lucide-react";
 import { createClient as createSupabaseClient } from "@/utils/supabase/browser";
 import { useRouter } from "next/navigation";
 
@@ -211,26 +211,36 @@ export default function Home() {
 
   // Inline rename state
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [editingTitle, setEditingTitle] = useState<string>("");
   const startRename = (id: string) => {
-    const current = sessions.find((s) => s.id === id)?.title || "";
     setEditingId(id);
-    setEditingTitle(current);
+    // Focus the title element for inline editing
+    setTimeout(() => {
+      const el = document.getElementById(`session-title-${id}`);
+      el?.focus();
+      // place caret at end
+      const range = document.createRange();
+      const sel = window.getSelection();
+      if (el && sel) {
+        range.selectNodeContents(el);
+        range.collapse(false);
+        sel.removeAllRanges();
+        sel.addRange(range);
+      }
+    }, 0);
   };
-  const saveRename = () => {
-    if (!editingId) return;
-    const nextTitle = editingTitle.trim();
-    setSessions((prev) =>
-      prev.map((s) =>
-        s.id === editingId ? { ...s, title: nextTitle || s.title, updatedAt: Date.now() } : s
-      )
-    );
+  const saveRenameInline = (id: string) => {
+    const el = document.getElementById(`session-title-${id}`);
+    const nextTitle = (el?.textContent || "").trim();
+    if (nextTitle) {
+      setSessions((prev) => prev.map((s) => (s.id === id ? { ...s, title: nextTitle, updatedAt: Date.now() } : s)));
+    }
     setEditingId(null);
-    setEditingTitle("");
   };
-  const cancelRename = () => {
+  const cancelRenameInline = (id: string) => {
+    const prevTitle = sessions.find((s) => s.id === id)?.title || "";
+    const el = document.getElementById(`session-title-${id}`);
+    if (el) el.textContent = prevTitle;
     setEditingId(null);
-    setEditingTitle("");
   };
 
   async function handleQuery() {
@@ -375,43 +385,21 @@ export default function Home() {
                   onKeyDown={(e) => {
                     if (e.key === "Enter" || e.key === " ") selectSession(s.id);
                   }}
-                  className={`w-full flex items-center justify-between text-left px-3 py-2 rounded-lg border ${activeSessionId === s.id ? 'bg-blue-50 border-blue-200' : 'bg-zinc-50 border-black/5'}`}
                 >
-                  {editingId === s.id ? (
-                    <div className="flex items-center gap-3 w-full" onClick={(e) => e.stopPropagation()}>
-                      <input
-                        className="flex-1 min-w-0 h-9 rounded-md px-3 border border-black/10 bg-white text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        value={editingTitle}
-                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEditingTitle(e.target.value)}
-                        onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => {
-                          if (e.key === "Enter") saveRename();
-                          if (e.key === "Escape") cancelRename();
+                    <div className="flex items-center justify-between gap-2 w-full" onClick={(e) => e.stopPropagation()}>
+                      <span
+                        id={`session-title-${s.id}`}
+                        contentEditable={editingId === s.id}
+                        suppressContentEditableWarning
+                        className={`truncate text-sm ${editingId === s.id ? "outline-none ring-2 ring-blue-500 px-1 rounded" : ""}`}
+                        onBlur={() => saveRenameInline(s.id)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") { e.preventDefault(); (e.target as HTMLElement).blur(); }
+                          if (e.key === "Escape") { e.preventDefault(); cancelRenameInline(s.id); }
                         }}
-                        autoFocus
-                        aria-label="Edit chat title"
-                      />
-                      <div className="flex items-center gap-0">
-                        <button
-                          onClick={(e) => { e.stopPropagation(); saveRename(); }}
-                          className="inline-flex items-center justify-center w-8 h-8 flex-shrink-0 rounded-md bg-blue-600 text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                          title="Save"
-                          aria-label="Save"
-                        >
-                          <Check size={16} />
-                        </button>
-                        <button
-                          onClick={(e) => { e.stopPropagation(); cancelRename(); }}
-                          className="inline-flex items-center justify-center w-8 h-8 flex-shrink-0 rounded-md hover:bg-zinc-100 focus:outline-none focus:ring-2 focus:ring-zinc-400"
-                          title="Cancel"
-                          aria-label="Cancel"
-                        >
-                          <X size={16} />
-                        </button>
-                      </div>
-                    </div>
-                  ) : (
-                    <>
-                      <span className="truncate text-sm">{s.title}</span>
+                      >
+                        {s.title}
+                      </span>
                       <span className={`flex items-center gap-1`}>
                         <button
                           onClick={(e) => { e.stopPropagation(); startRename(s.id); }}
@@ -430,14 +418,26 @@ export default function Home() {
                           <Trash2 size={16} className="text-red-600" />
                         </button>
                       </span>
-                    </>
-                  )}
+                    </div>
                 </div>
               </li>
             ))}
           </ul>
         </div>
         <div className="mt-auto pt-3 border-t border-black/10">
+          <button
+            onClick={() => router.push("/study-plan")}
+            className="w-full p-3 mb-2 rounded-xl border border-black/10 hover:bg-zinc-100 text-left flex items-center gap-3"
+            aria-label="Open study plan"
+          >
+            <div className="w-9 h-9 rounded-full border border-black/10 bg-zinc-50 flex items-center justify-center">
+              <GraduationCap size={18} className="text-zinc-700" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="text-sm font-medium text-zinc-900 truncate">Study Plan</div>
+              <div className="text-xs text-zinc-500 truncate">BSc Computer Science</div>
+            </div>
+          </button>
           <button
             onClick={() => setProfileOpen(true)}
             className="w-full p-3 rounded-xl border border-black/10 hover:bg-zinc-100 text-left flex items-center gap-3"
@@ -480,69 +480,59 @@ export default function Home() {
                       onKeyDown={(e) => {
                         if (e.key === "Enter" || e.key === " ") selectSession(s.id);
                       }}
-                      className={`w-full flex items-center justify-between text-left px-3 py-2 rounded-lg border ${activeSessionId === s.id ? 'bg-blue-50 border-blue-200' : 'bg-zinc-50 border-black/5'}`}
                     >
-                      {editingId === s.id ? (
-                        <div className="flex items-center gap-3 w-full" onClick={(e) => e.stopPropagation()}>
-                          <input
-                            className="flex-1 min-w-0 h-9 rounded-md px-3 border border-black/10 bg-white text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            value={editingTitle}
-                            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEditingTitle(e.target.value)}
-                            onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => {
-                              if (e.key === "Enter") saveRename();
-                              if (e.key === "Escape") cancelRename();
-                            }}
-                            autoFocus
-                            aria-label="Edit chat title"
-                          />
-                          <div className="flex items-center gap-0">
-                            <button
-                              onClick={(e) => { e.stopPropagation(); saveRename(); }}
-                              className="inline-flex items-center justify-center w-8 h-8 flex-shrink-0 rounded-md bg-blue-600 text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                              title="Save"
-                              aria-label="Save"
-                            >
-                              <Check size={16} />
-                            </button>
-                            <button
-                              onClick={(e) => { e.stopPropagation(); cancelRename(); }}
-                              className="inline-flex items-center justify-center w-8 h-8 flex-shrink-0 rounded-md hover:bg-zinc-100 focus:outline-none focus:ring-2 focus:ring-zinc-400"
-                              title="Cancel"
-                              aria-label="Cancel"
-                            >
-                              <X size={16} />
-                            </button>
-                          </div>
-                        </div>
-                      ) : (
-                        <>
-                          <span className="truncate text-sm">{s.title}</span>
-                          <span className={`flex items-center gap-1`}>
-                            <button
-                              onClick={(e) => { e.stopPropagation(); startRename(s.id); }}
-                              className="inline-flex items-center justify-center w-7 h-7 rounded-md hover:bg-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                              title="Rename"
-                              aria-label="Rename chat"
-                            >
-                              <Pencil size={16} className="text-zinc-600" />
-                            </button>
-                            <button
-                              onClick={(e) => { e.stopPropagation(); deleteSession(s.id); }}
-                              className="inline-flex items-center justify-center w-7 h-7 rounded-md hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-red-500"
-                              title="Delete"
-                              aria-label="Delete chat"
-                            >
-                              <Trash2 size={16} className="text-red-600" />
-                            </button>
-                          </span>
-                        </>
-                      )}
+                      <div className="flex items-center justify-between gap-2 w-full" onClick={(e) => e.stopPropagation()}>
+                        <span
+                          id={`session-title-${s.id}`}
+                          contentEditable={editingId === s.id}
+                          suppressContentEditableWarning
+                          className={`truncate text-sm ${editingId === s.id ? "outline-none ring-2 ring-blue-500 px-1 rounded" : ""}`}
+                          onBlur={() => saveRenameInline(s.id)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") { e.preventDefault(); (e.target as HTMLElement).blur(); }
+                            if (e.key === "Escape") { e.preventDefault(); cancelRenameInline(s.id); }
+                          }}
+                        >
+                          {s.title}
+                        </span>
+                        <span className={`flex items-center gap-1`}>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); startRename(s.id); }}
+                            className="inline-flex items-center justify-center w-7 h-7 rounded-md hover:bg-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            title="Rename"
+                            aria-label="Rename chat"
+                          >
+                            <Pencil size={16} className="text-zinc-600" />
+                          </button>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); deleteSession(s.id); }}
+                            className="inline-flex items-center justify-center w-7 h-7 rounded-md hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-red-500"
+                            title="Delete"
+                            aria-label="Delete chat"
+                          >
+                            <Trash2 size={16} className="text-red-600" />
+                          </button>
+                        </span>
+                      </div>
                     </div>
                   </li>
                 ))}
               </ul>
             </div>
             <div className="mt-auto pt-3 border-t border-black/10">
+              <button
+                onClick={() => router.push("/study-plan")}
+                className="w-full p-3 mb-2 rounded-xl border border-black/10 hover:bg-zinc-100 text-left flex items-center gap-3"
+                aria-label="Open study plan"
+              >
+                <div className="w-9 h-9 rounded-full border border-black/10 bg-zinc-50 flex items-center justify-center">
+                  <GraduationCap size={18} className="text-zinc-700" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm font-medium text-zinc-900 truncate">Study Plan</div>
+                  <div className="text-xs text-zinc-500 truncate">BSc Computer Science</div>
+                </div>
+              </button>
               <button
                 onClick={() => setProfileOpen(true)}
                 className="w-full p-3 rounded-xl border border-black/10 hover:bg-zinc-100 text-left flex items-center gap-3"
@@ -669,6 +659,8 @@ function ProfileDialog({ onClose }: { onClose: () => void }) {
   const [student, setStudent] = useState<any | null>(null);
   const [signingOut, setSigningOut] = useState(false);
   const router = useRouter();
+  const [coursesSearch, setCoursesSearch] = useState("");
+  const [showAllCourses, setShowAllCourses] = useState(false);
 
   useEffect(() => {
     let mounted = true;
@@ -741,7 +733,13 @@ function ProfileDialog({ onClose }: { onClose: () => void }) {
     const d = new Date(student.bod);
     return isNaN(d.getTime()) ? "—" : d.toLocaleDateString();
   })() : "—";
-
+  // Compact computed lists for completed courses
+  const listRaw = Array.isArray(student?.completed_courses) ? student.completed_courses : [];
+  const normalizedCourses = listRaw.map((c: any) => String(c).trim()).filter(Boolean);
+  const q = coursesSearch.trim().toLowerCase();
+  const filteredCourses = q ? normalizedCourses.filter((c: string) => c.toLowerCase().includes(q)) : normalizedCourses;
+  const limit = 20;
+  const visibleCourses = showAllCourses ? filteredCourses : filteredCourses.slice(0, limit);
   const handleSignOut = async () => {
     try {
       setSigningOut(true);
@@ -760,12 +758,8 @@ function ProfileDialog({ onClose }: { onClose: () => void }) {
     <div className="fixed inset-0 z-50">
       <div className="absolute inset-0 bg-black/40" onClick={onClose} />
       <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[92%] max-w-xl">
-        <div className="relative rounded-2xl border border-black/10 bg-white shadow-xl p-6 pt-12 min-h-[520px]">
-          <button
-            aria-label="Close profile dialog"
-            onClick={onClose}
-            className="absolute right-3 top-3 inline-flex items-center justify-center w-9 h-9 rounded-full border border-black/10 hover:bg-zinc-100"
-          >
+      <div className="relative rounded-2xl border border-black/10 bg-white shadow-xl p-6 pt-12 max-h-[80vh]">
+          <button aria-label="Close profile dialog" onClick={onClose} className="absolute right-3 top-3 inline-flex items-center justify-center w-9 h-9 rounded-full border border-black/10 hover:bg-zinc-100">
             <X size={18} />
           </button>
 
@@ -775,6 +769,7 @@ function ProfileDialog({ onClose }: { onClose: () => void }) {
             </div>
           </div>
 
+          <div className="overflow-y-auto max-h-[68vh] pr-1">
           {loading ? (
             <div className="animate-pulse">
               <div className="h-5 w-40 bg-zinc-200 rounded mb-4" />
@@ -843,15 +838,44 @@ function ProfileDialog({ onClose }: { onClose: () => void }) {
               </div>
 
               <div className="mt-4">
-                <h3 className="text-sm font-medium mb-2">Completed Courses</h3>
-                {Array.isArray(student.completed_courses) && student.completed_courses.length ? (
-                  <ul className="space-y-1 text-sm">
-                    {student.completed_courses.map((c: string, i: number) => (
-                      <li key={i} className="rounded-md border border-black/10 bg-background px-3 py-2">
-                        {c}
-                      </li>
-                    ))}
-                  </ul>
+                <div className="flex items-center justify-between">
+                  <h3 className="text-sm font-medium">Completed Courses</h3>
+                  <span className="text-xs text-muted-foreground">{normalizedCourses.length} total</span>
+                </div>
+                {normalizedCourses.length ? (
+                  <div className="mt-2 rounded-xl border border-black/10 bg-background p-3">
+                    <div className="flex items-center gap-2 mb-3">
+                      <div className="relative flex-1">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                        <input
+                          type="text"
+                          placeholder="Search courses…"
+                          value={coursesSearch}
+                          onChange={(e) => setCoursesSearch(e.target.value)}
+                          className="w-full pl-9 pr-2 py-2 rounded-md border bg-card text-sm"
+                        />
+                      </div>
+                      {filteredCourses.length > limit && (
+                        <button
+                          onClick={() => setShowAllCourses((v) => !v)}
+                          className="px-3 py-2 rounded-md border text-sm"
+                        >
+                          {showAllCourses ? "Show less" : `Show all (${filteredCourses.length})`}
+                        </button>
+                      )}
+                    </div>
+                    {filteredCourses.length === 0 ? (
+                      <p className="text-sm text-zinc-500">No courses match your search.</p>
+                    ) : (
+                      <div className="flex flex-wrap gap-2">
+                        {visibleCourses.map((c: string, i: number) => (
+                          <span key={i} className="inline-flex items-center px-2 py-1 rounded-md bg-zinc-100 text-zinc-700 border text-xs">
+                            {c}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 ) : (
                   <p className="text-sm text-zinc-500">No courses recorded yet.</p>
                 )}
@@ -876,6 +900,7 @@ function ProfileDialog({ onClose }: { onClose: () => void }) {
               </div>
             </div>
           ) : null}
+          </div>
         </div>
       </div>
     </div>
