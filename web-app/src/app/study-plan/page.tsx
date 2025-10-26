@@ -1,12 +1,12 @@
 "use client";
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import Loader from "../components/Loader";
+
 import SplitText from "../components/SplitText";
 import { Background, Controls, ReactFlow, MiniMap, Node, Edge, useReactFlow } from "reactflow";
 import "reactflow/dist/style.css";
 import type { StudyPlanRow } from "../api/study-plan/route";
-import { Search, LayoutGrid, GitBranch, Check } from "lucide-react";
+import { Search, LayoutGrid, GitBranch, Check, Info, X } from "lucide-react";
 import { createClient as createSupabaseClient } from "@/utils/supabase/browser";
 import ELK from "elkjs/lib/elk.bundled.js";
 import { useRouter } from "next/navigation";
@@ -32,6 +32,7 @@ export default function StudyPlanPage() {
   const [view, setView] = useState<ViewMode>("graph");
   const [search, setSearch] = useState("");
   const [activeCode, setActiveCode] = useState<string | null>(null);
+  const [showInfo, setShowInfo] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -246,6 +247,15 @@ export default function StudyPlanPage() {
     };
     run();
   }, [layout]);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setShowInfo(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+
   return (
     <div className="min-h-screen bg-background text-foreground md:pl-72">
       <aside className="fixed left-0 top-0 h-full w-72 p-4 border-r bg-white text-zinc-900 border-black/10 hidden md:flex flex-col">
@@ -270,16 +280,18 @@ export default function StudyPlanPage() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <button
-              onClick={() => router.push("/")}
-              className="inline-flex items-center gap-2 rounded-md px-3 py-2 border bg-card"
-            >
-              <ArrowLeft className="w-4 h-4" />
-              Home
-            </button>
             <SplitText tag="h1" text="BSc Computer Science Study Plan" className="text-2xl sm:text-3xl font-semibold" />
           </div>
           <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowInfo(true)}
+              className="inline-flex items-center gap-2 rounded-md px-3 py-2 border bg-card"
+              aria-expanded={showInfo}
+              aria-controls="plan-info-overlay"
+            >
+              <Info className="w-4 h-4" />
+              Plan Info
+            </button>
             <button
               onClick={() => setView("list")}
               className={`inline-flex items-center gap-2 rounded-md px-3 py-2 border ${view === "list" ? "bg-secondary" : "bg-card"}`}
@@ -299,27 +311,66 @@ export default function StudyPlanPage() {
           </div>
         </div>
 
-        <div className="mt-3 flex flex-wrap gap-2">
-          {semesters.map((s) => {
-            const c = colorsBySemester.get(s.raw);
-            return (
-              <span key={s.raw} className="inline-flex items-center gap-2 text-xs px-2 py-1 rounded-md border" style={{ background: c?.fill || "var(--card)", color: "var(--foreground)" }}>
-                {s.raw}
-              </span>
-            );
-          })}
-        </div>
+        {showInfo && (
+          <div id="plan-info-overlay" className="fixed inset-0 z-[9999]">
+            <div className="absolute inset-0 bg-black/40" onClick={() => setShowInfo(false)} />
+            <div
+              className="fixed right-6 top-24 w-[min(90vw,420px)] max-h-[70vh] overflow-y-auto rounded-xl border bg-card text-card-foreground shadow-xl"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="plan-info-title"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="px-4 py-3 border-b flex items-center justify-between">
+                <h2 id="plan-info-title" className="text-sm font-medium">Study Plan Info</h2>
+                <button
+                  className="inline-flex items-center gap-2 rounded-md px-2 py-1 border bg-card"
+                  aria-label="Close"
+                  onClick={() => setShowInfo(false)}
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
 
-        <div className="mt-2 flex items-center gap-4 text-xs text-muted-foreground">
-          <div className="inline-flex items-center gap-2">
-            <span className="inline-block w-3 h-3 rounded-sm" style={{ background: "#dcfce7" }} />
-            <span>Green = completed</span>
+              <div className="p-4 space-y-4">
+                <div>
+                  <div className="text-xs font-medium mb-2">Colors</div>
+                  <div className="mt-1 flex items-center gap-4 text-xs text-muted-foreground">
+                    <div className="inline-flex items-center gap-2">
+                      <span className="inline-block w-3 h-3 rounded-sm" style={{ background: "#dcfce7" }} />
+                      <span>Green = completed</span>
+                    </div>
+                    <div className="inline-flex items-center gap-2">
+                      <span className="inline-block w-3 h-3 rounded-sm" style={{ background: "#93c5fd" }} />
+                      <span>Blue shades = not completed</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <div className="text-xs font-medium mb-2">Semester Key</div>
+                  <div className="mt-1 flex flex-wrap gap-2">
+                    {semesters.map((s) => {
+                      const c = colorsBySemester.get(s.raw);
+                      return (
+                        <span key={s.raw} className="inline-flex items-center gap-2 text-xs px-2 py-1 rounded-md border" style={{ background: c?.fill || "var(--card)", color: "var(--foreground)" }}>
+                          {s.raw}
+                        </span>
+                      );
+                    })}
+                    {semesters.length === 0 && (
+                      <span className="text-xs text-muted-foreground">No semesters loaded yet.</span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
-          <div className="inline-flex items-center gap-2">
-            <span className="inline-block w-3 h-3 rounded-sm" style={{ background: "#93c5fd" }} />
-            <span>Blue shade = not completed</span>
-          </div>
-        </div>
+        )}
+
+
+
+
 
         <div className="mt-6 flex items-center gap-3">
           <div className="relative flex-1">
@@ -335,7 +386,58 @@ export default function StudyPlanPage() {
         </div>
 
         {loading && (
-          <div className="flex items-center justify-center py-20"><Loader /></div>
+          <div className="mt-8 animate-pulse">
+            <div className="flex items-center justify-between gap-4">
+              <div className="h-8 w-64 bg-muted rounded-md" />
+              <div className="flex items-center gap-2">
+                <div className="h-9 w-20 bg-muted rounded-md" />
+                <div className="h-9 w-20 bg-muted rounded-md" />
+              </div>
+            </div>
+
+            <div className="mt-3 flex flex-wrap gap-2">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <span key={i} className="inline-block h-6 w-28 rounded-md bg-muted" />
+              ))}
+            </div>
+
+            <div className="mt-6">
+              <div className="h-9 w-full rounded-md bg-muted" />
+            </div>
+
+            {view === "list" ? (
+              <div className="mt-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {Array.from({ length: 6 }).map((_, i) => (
+                  <div key={i} className="rounded-xl border bg-card">
+                    <div className="px-4 py-3 border-b flex items-center justify-between">
+                      <div className="h-4 w-40 bg-muted rounded" />
+                      <div className="h-4 w-20 bg-muted rounded" />
+                    </div>
+                    <ul className="divide-y">
+                      {Array.from({ length: 3 }).map((_, j) => (
+                        <li key={j} className="px-4 py-3">
+                          <div className="flex items-start justify-between gap-4">
+                            <div className="flex items-start gap-2">
+                              <div className="h-4 w-4 bg-muted rounded" />
+                              <div>
+                                <div className="h-4 w-48 bg-muted rounded mb-2" />
+                                <div className="h-3 w-32 bg-muted rounded" />
+                              </div>
+                            </div>
+                            <div className="h-3 w-24 bg-muted rounded" />
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="mt-8 h-[70vh] rounded-xl border overflow-hidden bg-card">
+                <div className="w-full h-full bg-muted" />
+              </div>
+            )}
+          </div>
         )}
 
         {error && (

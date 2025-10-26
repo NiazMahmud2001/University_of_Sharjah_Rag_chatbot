@@ -4,7 +4,7 @@ import React, { useEffect, useState, useRef } from "react";
 import Image from "next/image";
 import Loader from "./components/Loader";
 import ShinyText from "../components/ShinyText";
-import { Send, Upload, Plus, Trash2, Pencil, Menu, X, Check, Loader2, LogOut, GraduationCap, Search } from "lucide-react";
+import { Send, Upload, Plus, Trash2, Pencil, Menu, X, Check, Loader2, LogOut, GraduationCap, Search, CalendarDays } from "lucide-react";
 import { createClient as createSupabaseClient } from "@/utils/supabase/browser";
 import { useRouter } from "next/navigation";
 
@@ -439,6 +439,19 @@ export default function Home() {
             </div>
           </button>
           <button
+            onClick={() => router.push("/exam-schedule")}
+            className="w-full p-3 mb-2 rounded-xl border border-black/10 hover:bg-zinc-100 text-left flex items-center gap-3"
+            aria-label="Open exam schedule"
+          >
+            <div className="w-9 h-9 rounded-full border border-black/10 bg-zinc-50 flex items-center justify-center">
+              <CalendarDays size={18} className="text-zinc-700" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="text-sm font-medium text-zinc-900 truncate">Exam Schedule</div>
+              <div className="text-xs text-zinc-500 truncate">Exams & timings</div>
+            </div>
+          </button>
+          <button
             onClick={() => setProfileOpen(true)}
             className="w-full p-3 rounded-xl border border-black/10 hover:bg-zinc-100 text-left flex items-center gap-3"
             aria-label="Open profile"
@@ -531,6 +544,19 @@ export default function Home() {
                 <div className="flex-1 min-w-0">
                   <div className="text-sm font-medium text-zinc-900 truncate">Study Plan</div>
                   <div className="text-xs text-zinc-500 truncate">BSc Computer Science</div>
+                </div>
+              </button>
+              <button
+                onClick={() => router.push("/exam-schedule")}
+                className="w-full p-3 mb-2 rounded-xl border border-black/10 hover:bg-zinc-100 text-left flex items-center gap-3"
+                aria-label="Open exam schedule"
+              >
+                <div className="w-9 h-9 rounded-full border border-black/10 bg-zinc-50 flex items-center justify-center">
+                  <CalendarDays size={18} className="text-zinc-700" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm font-medium text-zinc-900 truncate">Exam Schedule</div>
+                  <div className="text-xs text-zinc-500 truncate">Exams & timings</div>
                 </div>
               </button>
               <button
