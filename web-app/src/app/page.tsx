@@ -58,6 +58,19 @@ export default function Home() {
   const [isMobile, setIsMobile] = useState(false);
   // Track textarea height to ensure reliable visual growth on phones
   const [inputHeight, setInputHeight] = useState<number>(44);
+  // Measure fixed composer height to create dynamic bottom spacer for chat
+  const composerRef = useRef<HTMLDivElement>(null);
+  const [composerHeight, setComposerHeight] = useState<number>(160);
+  useEffect(() => {
+    const update = () => {
+      const h = composerRef.current?.offsetHeight ?? 160;
+      setComposerHeight(h);
+    };
+    update();
+    const onResize = () => update();
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, [inputHeight, uploadedFiles.length, isMobile]);
   // Add chat session type and local persistence helpers
   type ChatSession = {
     id: string;
@@ -590,7 +603,7 @@ export default function Home() {
         </header>
 
         {/* Chat messages - removed shadows */}
-        <div className="flex-1 min-h-[50vh] p-4 sm:p-5 pb-28 overflow-y-auto overflow-x-hidden chat-scroll">
+        <div className="flex-1 min-h-[50vh] p-4 sm:p-5 overflow-y-auto overflow-x-hidden chat-scroll" style={{ paddingBottom: composerHeight }}>
           {messages.map((msg, idx) => (
             <div key={idx} className={`mb-3 flex ${msg.isBot ? "justify-start" : "justify-end"}`}>
               <div
@@ -610,7 +623,7 @@ export default function Home() {
         </div>
 
         {/* Input & actions - removed shadows and backdrop blur */}
-        <div className="fixed bottom-0 left-0 right-0 md:left-72 z-30">
+        <div className="fixed bottom-0 left-0 right-0 md:left-72 z-30" ref={composerRef} style={{ paddingBottom: "env(safe-area-inset-bottom)" }}>
           <div className="max-w-3xl mx-auto px-4 sm:px-6 py-3">
             <div className="p-3 sm:p-4">
               {uploadedFiles.length > 0 && (
