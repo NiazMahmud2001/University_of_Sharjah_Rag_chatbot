@@ -4,7 +4,7 @@ import React, { useEffect, useState, useRef } from "react";
 import Image from "next/image";
 import Loader from "./components/Loader";
 import ShinyText from "../components/ShinyText";
-import { Send, Upload, Plus, Trash2, Pencil, Menu, X, Check, Loader2, LogOut, GraduationCap, Search, CalendarDays } from "lucide-react";
+import { Send, Upload, Plus, Trash2, Pencil, Menu, X, Check, Loader2, LogOut, GraduationCap, Search, CalendarDays, Mic, MicOff } from "lucide-react";
 import { createClient as createSupabaseClient } from "@/utils/supabase/browser";
 import { useRouter } from "next/navigation";
 
@@ -58,6 +58,19 @@ export default function Home() {
   const [isMobile, setIsMobile] = useState(false);
   // Track textarea height to ensure reliable visual growth on phones
   const [inputHeight, setInputHeight] = useState<number>(44);
+  // Server STT recording
+  const [isRecording, setIsRecording] = useState(false);
+  const [isProcessingSTT, setIsProcessingSTT] = useState(false);
+  const mediaStreamRef = useRef<MediaStream | null>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const chunksRef = useRef<Blob[]>([]);
+  // Snackbar
+  const [snackbar, setSnackbar] = useState<{ type: "error" | "info" | "success"; message: string } | null>(null);
+  useEffect(() => {
+    if (!snackbar) return;
+    const t = setTimeout(() => setSnackbar(null), 3500);
+    return () => clearTimeout(t);
+  }, [snackbar]);
   // Measure fixed composer height to create dynamic bottom spacer for chat
   const composerRef = useRef<HTMLDivElement>(null);
   const [composerHeight, setComposerHeight] = useState<number>(160);
@@ -200,6 +213,67 @@ export default function Home() {
     const t = setTimeout(() => setShowSplash(false), 2000);
     return () => clearTimeout(t);
   }, []);
+
+  const ensureMicPermission = async (): Promise<boolean> => {
+    try {
+      await navigator.mediaDevices.getUserMedia({ audio: true });
+      return true;
+    } catch (e: any) {
+      setSnackbar({ type: "error", message: "Microphone blocked. Allow access in browser settings." });
+      return false;
+    }
+  };
+
+  // Fallback: record audio and send to server STT
+  const startRecording = async () => {
+    setSnackbar(null);
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      mediaStreamRef.current = stream;
+      const recorder = new MediaRecorder(stream);
+      mediaRecorderRef.current = recorder;
+      chunksRef.current = [];
+      recorder.ondataavailable = (e) => {
+        if (e.data && e.data.size > 0) chunksRef.current.push(e.data);
+      };
+      recorder.onstop = async () => {
+        const blob = new Blob(chunksRef.current, { type: "audio/webm" });
+        chunksRef.current = [];
+        try {
+          setIsProcessingSTT(true);
+          const fd = new FormData();
+          fd.append("file", blob, "voice.webm");
+          const resp = await fetch("/api/stt", { method: "POST", body: fd });
+          const data = await resp.json().catch(() => ({}));
+          if (!resp.ok) {
+            setSnackbar({ type: "error", message: data?.error || "Transcription failed" });
+          } else {
+            const text = data?.text || "";
+            setInputText((prev) => (prev ? prev + " " + text : text));
+          }
+        } catch (e: any) {
+          setSnackbar({ type: "error", message: e?.message || "Failed to transcribe" });
+        }
+        setIsProcessingSTT(false);
+      };
+      recorder.start();
+      setIsRecording(true);
+    } catch (e: any) {
+      setSnackbar({ type: "error", message: e?.message || "Microphone blocked or not available." });
+    }
+  };
+  const stopRecording = () => {
+    try {
+      mediaRecorderRef.current?.stop();
+    } catch {}
+    try {
+      mediaStreamRef.current?.getTracks().forEach((t) => t.stop());
+    } catch {}
+    setIsRecording(false);
+  };
+  const toggleRecording = () => {
+    if (isRecording) stopRecording(); else startRecording();
+  };
 
   // Recompute textarea height on input changes
   useEffect(() => {
@@ -668,16 +742,33 @@ export default function Home() {
                       <ShinyText text="Send" speed={4} variant="onBlue" />
                     </span>
                   </button>
-                  <label className="h-11 px-3 rounded-xl bg-zinc-50 hover:bg-zinc-100 border border-zinc-200 text-sm text-zinc-900 cursor-pointer inline-flex items-center gap-2 shrink-0 whitespace-nowrap">
-                    <Upload size={18} />
-                    <span className="hidden sm:inline">Upload</span>
-                    <input type="file" multiple accept=".pdf,image/*" className="hidden" onChange={(e: React.ChangeEvent<HTMLInputElement>) => { const files = Array.from(e.target.files || []); setUploadedFiles((prev) => [...prev, ...files]); }} />
-                  </label>
+                  <button
+                    onClick={toggleRecording}
+                    disabled={isProcessingSTT}
+                    className={`h-11 px-3 rounded-xl border text-sm inline-flex items-center gap-2 shrink-0 whitespace-nowrap ${isRecording ? "bg-red-500 border-red-600 text-white" : "bg-zinc-50 hover:bg-zinc-100 border-zinc-200 text-zinc-900"} ${isProcessingSTT ? "opacity-60 cursor-not-allowed" : ""}`}
+                    aria-pressed={isRecording}
+                    aria-label={isRecording ? "Stop recording" : "Start recording"}
+                    title={isRecording ? "Stop recording" : "Start recording"}
+                  >
+                    {isProcessingSTT ? <Loader2 size={18} className="animate-spin" /> : (isRecording ? <MicOff size={18} /> : <Mic size={18} />)}
+                    <span className="hidden sm:inline">{isProcessingSTT ? "Processing…" : isRecording ? "Recording…" : "Speak"}</span>
+                  </button>
                 </div>
               </div>
             </div>
           </div>
         </div>
+        {/* Snackbar */}
+        {snackbar && (
+          <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50">
+            <div className={`backdrop-blur-md bg-white/60 dark:bg-zinc-800/50 border rounded-xl px-4 py-2 shadow-lg flex items-center gap-3 ${snackbar.type === "error" ? "border-red-500/70" : snackbar.type === "success" ? "border-green-500/70" : "border-blue-500/70"}`}>
+              <span className={`text-sm ${snackbar.type === "error" ? "text-red-700" : snackbar.type === "success" ? "text-green-700" : "text-blue-700"}`}>{snackbar.message}</span>
+              <button className="ml-2 inline-flex items-center justify-center w-6 h-6 rounded-md hover:bg-black/5" onClick={() => setSnackbar(null)} aria-label="Close notification">
+                <X size={14} />
+              </button>
+            </div>
+          </div>
+        )}
       {profileOpen && <ProfileDialog onClose={() => setProfileOpen(false)} />}
       </main>
     </div>
