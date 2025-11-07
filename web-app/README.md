@@ -1,103 +1,77 @@
-## Overview
+**NEXLY Frontend**
 
-This is a Next.js app that integrates with:
+- Next.js app for a university RAG assistant with Supabase auth, study plan visualization, exam schedule, and a chat interface.
 
-- Supabase for auth and data (`students`, `study_plan_*`, `u22106802-exams`)
-- A remote RAG backend (FastAPI) reachable at `/askQuestion/` (Lightning AI)
+**Overview**
+- Authenticates via Supabase and gates access to all pages.
+- Home chat UI with local sessions, file upload, and optional voice transcription.
+- Study Plan page visualizes prerequisites and completion with React Flow.
+- Exam Schedule lists upcoming exams with search and local caching.
+- Responsive sidebar for navigation; mobile drawer and profile dialog.
 
-The frontend uses `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, and `RAG_SERVER_URL` from `.env.local`.
+**Tech Stack**
+- Next.js `^15.x`, React 18, Tailwind CSS `^4.x`.
+- Supabase (`@supabase/ssr`, `@supabase/supabase-js`).
+- React Flow for graph visualization, Lucide icons.
+- Styled Components, GSAP (minor UI animations).
 
-## Prerequisites
+**Requirements**
+- Node.js 18+ (recommend 20+), npm or yarn/pnpm.
+- Supabase project with email/password auth enabled.
+- Optional: GROq API key for voice transcription.
 
-- Node.js 18+ and npm (or yarn/pnpm)
-- Supabase project and anon key
-- Lightning AI account (to host the FastAPI RAG backend)
-- Groq API key for the backend LLM (used in the RAG notebook/code)
+**Environment Variables**
+- `NEXT_PUBLIC_SUPABASE_URL` — `https://<project-ref>.supabase.co`.
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY` — Supabase anon key.
+- `RAG_SERVER_URL` — URL to the upstream RAG endpoint (expects POST JSON `{ query, isChat }`).
+- `GROQ_API_KEY` — for server-side `/api/stt` transcription.
 
-## Configure Environment
+Place them in `.env.local` (create if missing) and restart dev server after changes.
 
-1. Copy `./.env.local.example` to `./.env.local` and fill values:
+**Getting Started**
+- `cd web-app`
+- `npm install`
+- `npm run dev`
+- Open the URL shown in the terminal (commonly `http://localhost:3000/`).
+- Visit `/login`, sign in, then use the chat and navigation.
 
-```
-NEXT_PUBLIC_SUPABASE_URL=https://<your-project-ref>.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=<your-anon-key>
-RAG_SERVER_URL=https://<your-lightning-app-host>/askQuestion/
-```
+**Pages**
+- `/` — Chat interface; local sessions, file attachments, voice input, profile dialog.
+- `/study-plan` — Graph and list views of `study_plan_bsc_computer_science` with completed courses highlighted.
+- `/exam-schedule` — Table view of `u22106802-exams` with search; results cached per user.
+- `/login` — Email/password sign-in using Supabase via a password grant proxy.
 
-Notes:
-- The app reads both `NEXT_PUBLIC_SUPABASE_*` and non-public names; prefer the `NEXT_PUBLIC_*` variants in the frontend.
-- Restart the dev server after editing envs.
+**API Routes**
+- `/api/auth/password` — Proxies Supabase password grant; returns tokens (uses `NEXT_PUBLIC_SUPABASE_*`).
+- `/api/ask` — Forwards chat queries to `RAG_SERVER_URL`; expects `{ answer }`.
+- `/api/stt` — Sends audio to GROq Whisper (`whisper-large-v3-turbo`); requires `GROQ_API_KEY`.
+- `/api/study-plan` — Server-side Supabase fetch and normalization for study plan.
 
-## Run the Frontend Locally
+**Supabase Data**
+- Tables referenced by the app:
+- `students`: `id`, `name`, `uid`, `completed_courses` (array of codes/titles).
+- `study_plan_bsc_computer_science`: `id`, `course_code`, `course_title`, `prerequisites[]`, `course_semester`.
+- `u22106802-exams`: `id`, `student_id`, `exam`, `location`, `exam_date`, `exam_time`, `instructor`, etc.
+- Ensure RLS permits authenticated read for the current user where applicable.
 
-```bash
-npm install
-npm run dev
-# open http://localhost:3000
-```
+**Behavior & Caching**
+- Local storage keys:
+- `nexly:chats` — chat sessions and messages.
+- `nexly:profile:<userId>` — profile cache for sidebar and dialog.
+- `nexly:exams:<userId>` — cached exam rows.
+- Browser cache is cleared on Supabase sign-out to avoid stale data.
 
-Login flow sends credentials to `/api/auth/password` which proxies Supabase auth. The chat page calls `/api/ask` which forwards to `RAG_SERVER_URL`.
+**Scripts**
+- `npm run dev` — start local dev server.
+- `npm run build` — production build.
+- `npm run start` — run production build.
 
-## Deploy the RAG Backend on Lightning AI
+**Troubleshooting**
+- “Supabase config missing” — check `.env.local` and ensure URL ends with `.supabase.co`.
+- Login errors — the proxy maps Supabase error codes to friendly messages.
+- `/api/ask` 500 — confirm `RAG_SERVER_URL` points to a reachable endpoint.
+- Microphone blocked — grant browser permission; `/api/stt` requires `GROQ_API_KEY`.
 
-You have two options to host the FastAPI endpoint `/askQuestion/` used by the frontend:
-
-- Option A: Use the existing notebook (`Backend_agentic_AI_part/main4_G.ipynb`).
-  - Upload the `Backend_agentic_AI_part/` folder (including `topLevelAgen_InformationBank/` docs) to a Lightning AI workspace.
-  - In the workspace terminal:
-    - Create a venv and install deps (examples):
-      ```bash
-      python -m venv .venv && source .venv/bin/activate
-      pip install fastapi uvicorn langchain langchain-groq groq faiss-cpu pydantic requests beautifulsoup4 supabase python-dotenv
-      ```
-    - Set environment variables:
-      ```bash
-      export GROQ_API_KEY=<your-groq-key>
-      export SUPABASE_URL=https://<your-project-ref>.supabase.co
-      export SUPABASE_SERVICE_ROLE_KEY=<optional-if-used>
-      ```
-    - Open the notebook and run all cells that construct the FastAPI app and start `uvicorn` on port `8709`. If the notebook doesn’t auto-run the server, you can create a small `server.py` that imports the app and run:
-      ```bash
-      uvicorn server:app --host 0.0.0.0 --port 8709
-      ```
-  - In Lightning, expose the port `8709` to obtain a public URL. Your endpoint will be:
-    - `https://<your-lightning-host>/askQuestion/`
-
-- Option B: Convert the notebook to a script-based FastAPI app.
-  - Extract the endpoint definitions (`/askQuestion`) to `server.py`.
-  - Ensure the code loads required docs from `topLevelAgen_InformationBank/` and reads `GROQ_API_KEY` from env.
-  - Run `uvicorn` as above and expose port `8709`.
-
-Once the public URL is available, set `RAG_SERVER_URL` in `.env.local` and restart the frontend.
-
-## Supabase Setup
-
-- From Supabase Dashboard → API, copy `Project URL` and `anon` key to `.env.local`.
-- Create tables used by the app (names from code):
-  - `students` with fields including `id`, `name`, `uid`, `completed_courses` (array)
-  - `study_plan_bsc_computer_science` (and related study-plan tables)
-  - `u22106802-exams`
-- Ensure Row Level Security policies allow the authenticated user to read the needed rows.
-
-## Wiring the Frontend to Backend
-
-- The chat UI calls `/api/ask`, which forwards to `RAG_SERVER_URL`.
-- Update `.env.local` with your Lightning public URL and restart.
-- For testing the Gradio demo, point its request to the same Lightning URL:
-  ```python
-  import requests
-  API_URL = "https://<your-lightning-host>/askQuestion/"
-  res = requests.post(API_URL, json={"query": "Hello"})
-  print(res.json())
-  ```
-
-## Troubleshooting
-
-- “Supabase config missing” errors: verify `.env.local` keys and that the URL ends with `.supabase.co`.
-- 500s from `/api/ask`: confirm `RAG_SERVER_URL` is correct and the Lightning port is exposed.
-- Auth failures: check `/api/auth/password` returns mapped error codes and your Supabase email/password settings are enabled.
-
-## Notes
-
-- Any env change requires dev server restart.
-- For production, host the Next.js app on Vercel or a similar platform and keep `RAG_SERVER_URL` pointing to the Lightning public endpoint.
+**Notes**
+- Restart the dev server after changing environment variables.
+- For deployment (e.g., Vercel), configure env vars and keep `RAG_SERVER_URL` pointing to your backend.
