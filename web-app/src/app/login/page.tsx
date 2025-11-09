@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { createClient as createBrowserSupabase } from "@/utils/supabase/browser";
 import Image from "next/image";
+import Squares from "@/components/Squares";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -65,13 +66,23 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-background text-foreground flex items-center justify-center px-4">
-      <div className="w-full max-w-md rounded-2xl border border-black/10 bg-white p-6 shadow-sm">
-        <div className="flex items-center gap-3 mb-4">
-          <Image src="/b.svg" alt="NEXLY Logo" width={80} height={60} className="h-10 w-auto" />
-          <h1 className="text-xl font-semibold">Sign in</h1>
-        </div>
-        <form onSubmit={handleSubmit} className="space-y-4">
+    <div className="relative min-h-screen bg-background text-foreground">
+      <div className="absolute inset-0">
+        <Squares
+          speed={0.5}
+          squareSize={25}
+          direction="diagonal"
+          borderColor="#333"
+          hoverFillColor="#202020"
+        />
+      </div>
+      <div className="absolute inset-0 flex items-center justify-center px-4">
+        <div className="w-full max-w-md rounded-2xl border border-black/10 bg-white p-6 shadow-sm relative z-10">
+          <div className="flex items-center gap-3 mb-4">
+            <Image src="/b.svg" alt="NEXLY Logo" width={80} height={60} className="h-10 w-auto" />
+            <h1 className="text-xl font-semibold">Sign in</h1>
+          </div>
+          <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block text-sm mb-1" htmlFor="email">Email</label>
             <input
@@ -107,6 +118,7 @@ export default function LoginPage() {
             {loading ? "Signing in..." : "Sign in"}
           </button>
         </form>
+        </div>
       </div>
     </div>
   );
