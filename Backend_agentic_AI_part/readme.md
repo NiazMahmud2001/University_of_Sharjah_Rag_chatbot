@@ -7,7 +7,7 @@ Use the Studio’s default conda environment. Virtualenv creation is disabled in
 
 ## Prerequisites
 - A running Lightning Studio with Terminal and Jupyter access
-- Your backend files uploaded (e.g., `main4_G.ipynb`, FAISS index, documents)
+- Your backend files uploaded (e.g., `main4_GG.ipynb`, FAISS index, documents)
 - Supabase and Groq credentials
 
 ## Install dependencies (no venv)
@@ -42,7 +42,7 @@ export GROQ_API_KEY=...
 If your backend reads other keys (service role, bucket path, etc.), add them here too.
 
 ## Run the FastAPI server from the notebook
-Open `Backend_agentic_AI_part/main4_G.ipynb` in Jupyter and execute cells to:
+Open `Backend_agentic_AI_part/main4_GG.ipynb` in Jupyter and execute cells to:
 - Initialize the RAG data structures (FAISS, doc store)
 - Initialize `generator_llm = ChatGroq(...)` with `GROQ_API_KEY`
 - Define the FastAPI `app` and `/askQuestion` endpoint
@@ -60,8 +60,8 @@ Keep the notebook kernel running while you need the API.
 If you prefer running via Terminal:
 
 ```
-jupyter nbconvert --to script Backend_agentic_AI_part/main4_G.ipynb
-uvicorn Backend_agentic_AI_part/main4_G:app --host 0.0.0.0 --port 8709
+jupyter nbconvert --to script Backend_agentic_AI_part/main4_GG.ipynb
+uvicorn Backend_agentic_AI_part/main4_GG:app --host 0.0.0.0 --port 8709
 ```
 
 Make sure the converted script initializes the model/index and defines `app`.
@@ -69,12 +69,12 @@ Make sure the converted script initializes the model/index and defines `app`.
 ## Expose the port and get a public URL
 In Studio, expose port `8709` via the Ports/Networking UI. Copy the public URL it provides (e.g., `https://<your-studio-id>.lightning.ai:8709/`).
 
-Test the endpoint:
+Test the endpoint (expects JSON payload `{ query: string, isChat: boolean }`):
 
 ```
 curl -s -X POST \
   -H 'Content-Type: application/json' \
-  -d '{"query":"What courses should I take next?"}' \
+  -d '{"query":"What courses should I take next?","isChat":true}' \
   "<PUBLIC_URL>/askQuestion"
 ```
 
@@ -82,7 +82,7 @@ curl -s -X POST \
 Set `web-app/.env.local` `RAG_SERVER_URL` to the public URL you obtained:
 
 ```
-RAG_SERVER_URL="<PUBLIC_URL>/askQuestion/"
+RAG_SERVER_URL="<PUBLIC_URL>/askQuestion"
 ```
 
 Restart the Next.js dev server if it’s running.

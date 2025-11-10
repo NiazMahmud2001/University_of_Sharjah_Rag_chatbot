@@ -8,6 +8,7 @@
 - Study Plan page visualizes prerequisites and completion with React Flow.
 - Exam Schedule lists upcoming exams with search and local caching.
 - Responsive sidebar for navigation; mobile drawer and profile dialog.
+- Login page includes an animated Squares background for a modern look.
 
 **Tech Stack**
 - Next.js `^15.x`, React 18, Tailwind CSS `^4.x`.
@@ -39,7 +40,8 @@ Place them in `.env.local` (create if missing) and restart dev server after chan
 - `/` — Chat interface; local sessions, file attachments, voice input, profile dialog.
 - `/study-plan` — Graph and list views of `study_plan_bsc_computer_science` with completed courses highlighted.
 - `/exam-schedule` — Table view of `u22106802-exams` with search; results cached per user.
-- `/login` — Email/password sign-in using Supabase via a password grant proxy.
+- `/login` — Email/password sign-in using Supabase via a password grant proxy. Background uses `@/components/Squares`:
+  - To disable hover interaction on the background, wrap the canvas with `pointer-events: none`.
 
 **API Routes**
 - `/api/auth/password` — Proxies Supabase password grant; returns tokens (uses `NEXT_PUBLIC_SUPABASE_*`).
