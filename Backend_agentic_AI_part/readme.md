@@ -56,6 +56,47 @@ uvicorn.run(app, host="0.0.0.0", port=8709)
 
 Keep the notebook kernel running while you need the API.
 
+### FastAPI endpoint contract (frontend → backend)
+- Path: `POST /askQuestion`
+- Request body (JSON):
+  - `query` (string) — user prompt
+  - `isChat` (boolean) — optional flag to control chat behavior; default `true`
+- Response body (JSON):
+  - `answer` (string) — text answer to display in the frontend
+- Content-Type: `application/json`
+
+Example minimal FastAPI handler:
+```
+from fastapi import FastAPI
+from pydantic import BaseModel
+
+app = FastAPI()
+
+class AskPayload(BaseModel):
+    query: str
+    isChat: bool | None = True
+
+@app.post("/askQuestion")
+async def ask_question(payload: AskPayload):
+    # TODO: call your RAG/LLM and produce 'answer'
+    answer = "..."
+    return {"answer": answer}
+```
+
+### CORS (allow local frontend)
+When developing locally, allow the Next.js origin (e.g., `http://localhost:3000` or `3001`).
+```
+from fastapi.middleware.cors import CORSMiddleware
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # or restrict to specific origins
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+```
+
 ## Alternative: convert notebook to a script
 If you prefer running via Terminal:
 
@@ -85,6 +126,8 @@ Set `web-app/.env.local` `RAG_SERVER_URL` to the public URL you obtained:
 RAG_SERVER_URL="<PUBLIC_URL>/askQuestion"
 ```
 
+Frontend contract expects `POST` with `{ query, isChat }` and a response `{ answer }`.
+
 Restart the Next.js dev server if it’s running.
 
 ## Troubleshooting
@@ -93,6 +136,7 @@ Restart the Next.js dev server if it’s running.
 - 401/403 from Groq: verify `GROQ_API_KEY` scope and that the env var is available in the running process.
 - 400 from `/askQuestion`: confirm the request payload matches the endpoint’s expected schema.
 - Frontend 500 from `/api/ask`: check `RAG_SERVER_URL` correctness and reachable status via `curl`.
+- CORS blocked: enable CORS for your dev origin; see snippet above.
 
 
 

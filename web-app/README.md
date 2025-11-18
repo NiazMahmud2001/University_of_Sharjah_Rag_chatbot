@@ -24,7 +24,7 @@
 **Environment Variables**
 - `NEXT_PUBLIC_SUPABASE_URL` — `https://<project-ref>.supabase.co`.
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY` — Supabase anon key.
-- `RAG_SERVER_URL` — URL to the upstream RAG endpoint (expects POST JSON `{ query, isChat }`).
+- `RAG_SERVER_URL` — URL to the upstream RAG endpoint (e.g., `https://<host>/askQuestion`, expects POST JSON `{ query, isChat }`).
 - `GROQ_API_KEY` — for server-side `/api/stt` transcription.
 
 Place them in `.env.local` (create if missing) and restart dev server after changes.
@@ -45,7 +45,7 @@ Place them in `.env.local` (create if missing) and restart dev server after chan
 
 **API Routes**
 - `/api/auth/password` — Proxies Supabase password grant; returns tokens (uses `NEXT_PUBLIC_SUPABASE_*`).
-- `/api/ask` — Forwards chat queries to `RAG_SERVER_URL`; expects `{ answer }`.
+- `/api/ask` — Forwards chat queries to `RAG_SERVER_URL`; sends `{ query, isChat }`, expects `{ answer }`.
 - `/api/stt` — Sends audio to GROq Whisper (`whisper-large-v3-turbo`); requires `GROQ_API_KEY`.
 - `/api/study-plan` — Server-side Supabase fetch and normalization for study plan.
 
@@ -77,3 +77,4 @@ Place them in `.env.local` (create if missing) and restart dev server after chan
 **Notes**
 - Restart the dev server after changing environment variables.
 - For deployment (e.g., Vercel), configure env vars and keep `RAG_SERVER_URL` pointing to your backend.
+ - If you see CORS errors when calling `RAG_SERVER_URL`, enable CORS on the backend for your dev origin.

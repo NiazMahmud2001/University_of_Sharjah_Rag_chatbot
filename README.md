@@ -42,6 +42,20 @@ Nexly helps students find clear, reliable answers from official handbooks and cu
 - Frontend: `cd web-app && npm install && npm run dev`
 - Backend: see `Backend_agentic_AI_part/readme.md` for env vars, data paths, and run instructions
 
+## ⚙️ Configuration
+- Frontend env vars (add to `web-app/.env.local`):
+  - `NEXT_PUBLIC_SUPABASE_URL` — `https://<project-ref>.supabase.co`
+  - `NEXT_PUBLIC_SUPABASE_ANON_KEY` — Supabase anon key
+  - `RAG_SERVER_URL` — backend URL (e.g., `https://<host>/askQuestion`)
+  - `GROQ_API_KEY` — for `/api/stt` transcription
+- Restart the dev server after changing env vars.
+
+## 🔌 Backend API (summary)
+- Endpoint: `POST` `/<askQuestion>`
+- Request JSON: `{ query: string, isChat?: boolean }`
+- Response JSON: `{ answer: string }`
+- CORS: allow your frontend origin during local development.
+
 ## 🗺️ Status & Roadmap
 - 🔄 Active: improved search, richer citations, bookmarks, accessibility, localization
 - 🧩 Planned: topic guides, handbook change alerts, enhanced mobile experience
