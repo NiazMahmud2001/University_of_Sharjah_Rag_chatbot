@@ -8,6 +8,7 @@ import { Send, Upload, Plus, Trash2, Pencil, X, Check, Loader2, LogOut, Graduati
 import { createClient as createSupabaseClient } from "@/utils/supabase/browser";
 import { useRouter } from "next/navigation";
 import { getGreeting } from "../utils/greetings";
+import { renderMarkdownSimple } from "../utils/markdown";
 
 type Message = { text: string; isBot: boolean };
 
@@ -372,10 +373,15 @@ export default function Home() {
         return updated;
       });
 
+      const history = [
+        ...messages.map((m) => ({ role: m.isBot ? "assistant" : "user", content: m.text })),
+        { role: "user", content: value },
+      ];
+
       const res = await fetch("/api/ask", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ query: value, isChat: true }),
+        body: JSON.stringify({ query: value, isChat: true, history }),
       });
 
       if (!res.ok) {
@@ -390,7 +396,8 @@ export default function Home() {
         });
       } else {
         const data = await res.json();
-        const botMsg = { text: data?.answer ?? "", isBot: true };
+        const parsedHtml = renderMarkdownSimple(String(data?.answer ?? ""));
+        const botMsg = { text: parsedHtml, isBot: true };
         setMessages((prev) => {
           const updated = [...prev, botMsg];
           setSessions((prevSessions) =>
